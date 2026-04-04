@@ -306,6 +306,19 @@ TEST(SharedPtrTest, ArrayConstructor)
     EXPECT_EQ(ptr.get(), static_cast<int *>(ptr.get()));
 }
 
+TEST(SharedPtrTest, ArrayReset)
+{
+    SharedPtr<int[3]> ptr(new int[3]{1, 2, 3});
+    auto arr = new int[]{4,5};
+    ptr.reset(arr);
+
+    EXPECT_EQ(ptr[0], 4);
+    EXPECT_EQ(ptr[1], 5);
+    EXPECT_EQ(ptr.get(), static_cast<int *>(ptr.get()));
+
+    SharedPtr<int[]> ptr2(ptr);
+}
+
 TEST(SharedPtrTest, ArrayMove)
 {
     SharedPtr<int[]> ptr1(new int[3]{1, 2, 3});
