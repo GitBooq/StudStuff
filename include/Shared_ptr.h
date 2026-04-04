@@ -325,8 +325,8 @@ namespace my::memory
          * @throws std::bad_alloc If control block allocation fails.
          */
         template <std::move_constructible Deleter>
-        SharedPtr(std::nullptr_t, Deleter d)
-            : SharedPtrBase(new Cb_regular<T, Deleter>(nullptr, std::move(d))) {}
+        SharedPtr(std::nullptr_t, Deleter&& d)
+            : SharedPtrBase(new Cb_regular<T, std::decay_t<Deleter>>(nullptr, std::forward<Deleter>(d))) {}
 
         /**
          * @brief Constructs a SharedPtr from a raw pointer and custom deleter.
@@ -339,8 +339,8 @@ namespace my::memory
          * @warning The pointer must be allocated with `new` (or compatible).
          */
         template <std::move_constructible Deleter>
-        SharedPtr(T *p, Deleter d)
-            : SharedPtrBase(p ? new Cb_regular<T, Deleter>(p, d) : nullptr), ptr(p)
+        SharedPtr(T *p, Deleter&& d)
+            : SharedPtrBase(p ? new Cb_regular<T, std::decay_t<Deleter>>(p, std::forward<Deleter>(d)) : nullptr), ptr(p)
         {
         }
 
@@ -566,8 +566,8 @@ namespace my::memory
          * @throws std::bad_alloc If control block allocation fails.
          */
         template <std::move_constructible Deleter>
-        SharedPtr(std::nullptr_t, Deleter d)
-            : SharedPtrBase(new Cb_regular<element_type, Deleter>(nullptr, std::move(d))) {}
+        SharedPtr(std::nullptr_t, Deleter&& d)
+            : SharedPtrBase(new Cb_regular<element_type, std::decay_t<Deleter>>(nullptr, std::forward<Deleter>(d))) {}
 
         /**
          * @brief Constructs a SharedPtr from an array pointer and a custom deleter.
@@ -580,8 +580,8 @@ namespace my::memory
          * @warning The pointer must be allocated with `new` (or compatible).
          */
         template <std::move_constructible Deleter>
-        SharedPtr(element_type *p, Deleter d)
-            : SharedPtrBase(p ? new Cb_regular<element_type, Deleter>(p, d) : nullptr), ptr(p)
+        SharedPtr(element_type *p, Deleter&& d)
+            : SharedPtrBase(p ? new Cb_regular<element_type, std::decay_t<Deleter>>(p, std::forward<Deleter>(d)) : nullptr), ptr(p)
         {
         }
 
