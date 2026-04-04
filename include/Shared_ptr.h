@@ -7,7 +7,7 @@
  * - Reference counting (shared ownership)
  * - Weak pointers (non-owning observers)
  * - Custom deleters
- * - Unbounded array support (T[])
+ * - One-dimension Arrays support
  * - Polymorphic conversions
  * - Exception safety (strong guarantee)
  *

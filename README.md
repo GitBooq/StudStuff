@@ -6,7 +6,7 @@ Header-only implementation of shared_ptr and weak_ptr with reference counting.
 - Shared ownership with reference counting
 - Weak pointers for cyclic dependencies
 - Custom deleters
-- Unbounded array support (`T[]`)
+- One-dimension Arrays support
 - Polymorphic conversions
 - Strong exception safety (copy-and-swap)
 
