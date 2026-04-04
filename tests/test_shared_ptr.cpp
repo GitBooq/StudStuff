@@ -100,6 +100,14 @@ TEST(SharedPtrTest, ConstructorFromNullptr)
     EXPECT_EQ(ptr.use_count(), 0);
 }
 
+TEST(SharedPtrTest, ConstructorFromNullptrWithCustomDeleter)
+{
+    auto custom_deleter = [](int *ptr) { delete ptr; };
+    SharedPtr<int> ptr(nullptr, custom_deleter);
+    EXPECT_EQ(ptr.get(), nullptr);
+    EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+}
+
 TEST(SharedPtrTest, CopyConstructor)
 {
     TObj::reset_counters();

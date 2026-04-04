@@ -326,7 +326,7 @@ namespace my::memory
          */
         template <std::move_constructible Deleter>
         SharedPtr(std::nullptr_t, Deleter d)
-            : SharedPtrBase(new Cb_regular<T>(nullptr, d)) {}
+            : SharedPtrBase(new Cb_regular<T, Deleter>(nullptr, d)) {}
 
         /**
          * @brief Constructs a SharedPtr from a raw pointer and custom deleter.
