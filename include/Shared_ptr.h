@@ -262,8 +262,7 @@ namespace my::memory
      *
      * @see WeakPtr
      */
-    template <typename T>
-    requires NotArray<T>
+    template <NotArray T>
     class SharedPtr<T> : public SharedPtrBase
     {
         /**
