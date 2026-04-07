@@ -102,7 +102,7 @@ concept Array = std::is_array_v<T>;
  */
 class SharedPtrBase {
 protected:
-  CbBase *cb_; ///< Pointer to the control block
+  CbBase *cb_{nullptr}; ///< Pointer to the control block
 
   /**
    * @brief Increments the strong reference count.
@@ -251,7 +251,7 @@ public:
   using element_type = T;
 
 private:
-  element_type *ptr_; ///< Stored pointer to the managed object
+  element_type *ptr_{nullptr}; ///< Stored pointer to the managed object
 
   /**
    * @brief Private constructor for WeakPtr::lock().
@@ -303,7 +303,8 @@ public:
   template <std::move_constructible Deleter>
   SharedPtr(std::nullptr_t, Deleter &&del)
       : SharedPtrBase(new CbRegular<T, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(del))) {}
+            nullptr, std::forward<Deleter>(del))),
+        ptr_(nullptr) {}
 
   /**
    * @brief Constructs a SharedPtr from a raw pointer and custom deleter.
@@ -492,7 +493,7 @@ private:
 
   using default_deleter = std::default_delete<element_type[]>;
 
-  element_type *ptr_; ///< Pointer to the first element of the array
+  element_type *ptr_{nullptr}; ///< Pointer to the first element of the array
 
   /**
    * @brief Private constructor for WeakPtr::lock().
@@ -549,7 +550,8 @@ public:
   template <std::move_constructible Deleter>
   SharedPtr(std::nullptr_t, Deleter &&del)
       : SharedPtrBase(new CbRegular<element_type, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(del))) {}
+            nullptr, std::forward<Deleter>(del))),
+        ptr_(nullptr) {}
 
   /**
    * @brief Constructs a SharedPtr from an array pointer and a custom deleter.
@@ -726,7 +728,7 @@ public:
   using element_type = std::remove_extent_t<T>;
 
 private:
-  CbBase *cb_; ///< Pointer to the control block
+  CbBase *cb_{nullptr}; ///< Pointer to the control block
 
   /**
    * @brief Increments the weak reference count.

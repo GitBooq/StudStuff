@@ -156,7 +156,7 @@ public:
 template <typename T, typename Deleter = std::default_delete<T>>
 class CbRegular final : public CbBase {
 private:
-  T *ptr_;                          ///< Pointer to the managed object
+  T *ptr_{nullptr};                 ///< Pointer to the managed object
   std::tuple<Deleter> deleter_tup_; ///< Deleter (EBCO optimized)
 
 public:
