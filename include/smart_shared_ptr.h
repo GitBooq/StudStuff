@@ -243,7 +243,7 @@ private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
-   * Required for WeakPtr::lock() to access private constructor
+   * Required for WeakPtr::Lock() to access private constructor
    */
   template <typename> friend class WeakPtr;
 
@@ -254,7 +254,7 @@ private:
   element_type *ptr_{nullptr}; ///< Stored pointer to the managed object
 
   /**
-   * @brief Private constructor for WeakPtr::lock().
+   * @brief Private constructor for WeakPtr::Lock().
    *
    * @param p Pointer to the managed object.
    * @param block Control block to share.
@@ -487,7 +487,7 @@ private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
-   * Required for WeakPtr::lock() to access private constructor
+   * Required for WeakPtr::Lock() to access private constructor
    */
   template <typename> friend class WeakPtr;
 
@@ -496,7 +496,7 @@ private:
   element_type *ptr_{nullptr}; ///< Pointer to the first element of the array
 
   /**
-   * @brief Private constructor for WeakPtr::lock().
+   * @brief Private constructor for WeakPtr::Lock().
    *
    * @param p Pointer to the first element.
    * @param block Control block to share.
@@ -714,7 +714,7 @@ inline void swap(SharedPtr<T> &first, SharedPtr<T> &second) noexcept {
  * @details
  * Features:
  * - Non-owning observer
- * - Can be converted to SharedPtr if the object still exists (lock())
+ * - Can be converted to SharedPtr if the object still exists (Lock())
  * - Expires when the object is destroyed
  *
  * @see SharedPtr
