@@ -4,3 +4,4 @@ build/
 docs/
 .vscode/
 Doxyfile
+.clang-tidy
