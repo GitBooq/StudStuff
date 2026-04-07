@@ -9,7 +9,7 @@
 #pragma once
 
 #include <cstddef>
-#include <memory>  // for default_delete
+#include <memory> // for default_delete
 #include <tuple>
 
 namespace my::memory {
@@ -20,9 +20,9 @@ namespace my::memory {
  * handle different deleter types.
  */
 class CbBase {
- private:
-  std::size_t use_cnt_{1};   ///< Strong reference counter
-  std::size_t weak_cnt_{0};  ///< Weak reference counter
+private:
+  std::size_t use_cnt_{1};  ///< Strong reference counter
+  std::size_t weak_cnt_{0}; ///< Weak reference counter
 
   /**
    * @brief Prevents destruction of control block during object destruction.
@@ -33,7 +33,7 @@ class CbBase {
    */
   bool is_destroying_{false};
 
- public:
+public:
   // ========================================================================
   // Virtual interface
   // ========================================================================
@@ -65,7 +65,7 @@ class CbBase {
    *
    * @return void* Raw pointer to the managed object (may be nullptr).
    */
-  virtual void* data_ptr() const noexcept = 0;
+  virtual void *data_ptr() const noexcept = 0;
 
   /**
    * @brief Virtual destructor.
@@ -155,19 +155,19 @@ class CbBase {
  */
 template <typename T, typename Deleter = std::default_delete<T>>
 class CbRegular final : public CbBase {
- private:
-  T* ptr_;                           ///< Pointer to the managed object
-  std::tuple<Deleter> deleter_tup_;  ///< Deleter (EBCO optimized)
+private:
+  T *ptr_;                          ///< Pointer to the managed object
+  std::tuple<Deleter> deleter_tup_; ///< Deleter (EBCO optimized)
 
- public:
+public:
   /**
    * @brief Constructs a control block with a deleter.
    *
    * @param p Raw pointer to the managed object.
    * @param d Deleter functor (default constructed if omitted).
    */
-  explicit CbRegular(T* p, Deleter d = Deleter{})
-      : ptr_{p}, deleter_tup_(std::move(d)) {}
+  explicit CbRegular(T *ptr, Deleter del = Deleter{})
+      : ptr_{ptr}, deleter_tup_(std::move(del)) {}
 
   /**
    * @brief Destroys the managed object using the stored deleter.
@@ -175,7 +175,7 @@ class CbRegular final : public CbBase {
    * The pointer is set to nullptr after deletion.
    */
   void DestroyObject() noexcept override {
-    auto& [del] = deleter_tup_;
+    auto &[del] = deleter_tup_;
     del(ptr_);
     ptr_ = nullptr;
   }
@@ -190,7 +190,7 @@ class CbRegular final : public CbBase {
    *
    * @return void* Raw pointer (may be null).
    */
-  void* data_ptr() const noexcept override { return ptr_; }
+  void *data_ptr() const noexcept override { return ptr_; }
 
   /**
    * @brief Destructor.
@@ -200,4 +200,4 @@ class CbRegular final : public CbBase {
    */
   ~CbRegular() noexcept = default;
 };
-}  // namespace my::memory
+} // namespace my::memory

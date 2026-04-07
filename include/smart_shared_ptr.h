@@ -18,14 +18,14 @@
 
 #pragma once
 
-#include <compare>      // for compare_three_way
-#include <concepts>     // for move_constructible
-#include <cstddef>      // for nullptr_t, size_t, ptrdiff_t
-#include <memory>       // for default_delete
-#include <type_traits>  // for remove_extent_t
-#include <utility>      // for exchange, swap
+#include <compare>     // for compare_three_way
+#include <concepts>    // for move_constructible
+#include <cstddef>     // for nullptr_t, size_t, ptrdiff_t
+#include <memory>      // for default_delete
+#include <type_traits> // for remove_extent_t
+#include <utility>     // for exchange, swap
 
-#include "control_block.h"  // for CbBase, CbRegular
+#include "control_block.h" // for CbBase, CbRegular
 
 namespace my::memory {
 // ============================================================================
@@ -44,7 +44,7 @@ namespace my::memory {
  */
 template <typename From, typename To>
 concept ConvertibleAndComplete =
-    std::is_convertible_v<From*, To*> && requires { sizeof(From); };
+    std::is_convertible_v<From *, To *> && requires { sizeof(From); };
 
 /**
  * @brief Check convertaion between smart pointers element types
@@ -56,8 +56,8 @@ template <typename From, typename To>
 concept CompatibleSmartPtr = requires {
   typename From::element_type;
   typename To::element_type;
-  requires std::is_convertible_v<typename From::element_type*,
-                                 typename To::element_type*>;
+  requires std::is_convertible_v<typename From::element_type *,
+                                 typename To::element_type *>;
 };
 
 /**
@@ -101,14 +101,15 @@ concept Array = std::is_array_v<T>;
  * - Swap functionality
  */
 class SharedPtrBase {
- protected:
-  CbBase* cb_;  ///< Pointer to the control block
+protected:
+  CbBase *cb_; ///< Pointer to the control block
 
   /**
    * @brief Increments the strong reference count.
    */
   void AddRef() noexcept {
-    if (cb_ != nullptr) cb_->AddRef();
+    if (cb_ != nullptr)
+      cb_->AddRef();
   }
 
   /**
@@ -118,7 +119,8 @@ class SharedPtrBase {
    * if the count reaches zero.
    */
   void Release() noexcept {
-    if (cb_ != nullptr) cb_->Release();
+    if (cb_ != nullptr)
+      cb_->Release();
   }
 
   /**
@@ -131,7 +133,7 @@ class SharedPtrBase {
     cb_ = nullptr;
   }
 
- public:
+public:
   /**
    * @brief Constructs an empty SharedPtrBase.
    */
@@ -142,7 +144,7 @@ class SharedPtrBase {
    *
    * @param b Pointer to the control block (may be nullptr).
    */
-  explicit constexpr SharedPtrBase(CbBase* b) noexcept : cb_(b) {}
+  explicit constexpr SharedPtrBase(CbBase *b) noexcept : cb_(b) {}
 
   /**
    * @brief Copy constructor.
@@ -151,7 +153,7 @@ class SharedPtrBase {
    *
    * @details Increments the reference count of the managed object.
    */
-  SharedPtrBase(const SharedPtrBase& other) noexcept : cb_(other.cb_) {
+  SharedPtrBase(const SharedPtrBase &other) noexcept : cb_(other.cb_) {
     AddRef();
   }
 
@@ -162,7 +164,7 @@ class SharedPtrBase {
    *
    * @details The other object becomes empty.
    */
-  SharedPtrBase(SharedPtrBase&& other) noexcept
+  SharedPtrBase(SharedPtrBase &&other) noexcept
       : cb_{std::exchange(other.cb_, nullptr)} {}
 
   /**
@@ -181,7 +183,7 @@ class SharedPtrBase {
    *
    * @details Uses copy-and-swap idiom for strong exception safety.
    */
-  SharedPtrBase& operator=(SharedPtrBase other) noexcept {
+  SharedPtrBase &operator=(SharedPtrBase other) noexcept {
     Swap(other);
     return *this;
   }
@@ -191,7 +193,7 @@ class SharedPtrBase {
    *
    * @param other The SharedPtrBase to swap with.
    */
-  void Swap(SharedPtrBase& other) noexcept { std::swap(cb_, other.cb_); }
+  void Swap(SharedPtrBase &other) noexcept { std::swap(cb_, other.cb_); }
 
   /**
    * @brief Returns the strong reference count.
@@ -205,8 +207,7 @@ class SharedPtrBase {
 };
 
 // SharedPtr - Primary dummy template
-template <typename T>
-class SharedPtr {
+template <typename T> class SharedPtr {
   static_assert(
       sizeof(T) == 0,
       "SharedPtr supports only non-array types and one-dimensional arrays");
@@ -235,22 +236,20 @@ class SharedPtr {
  *
  * @see WeakPtr
  */
-template <NotArray T>
-class SharedPtr<T> : public SharedPtrBase {
- private:
+template <NotArray T> class SharedPtr<T> : public SharedPtrBase {
+private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
    * Required for WeakPtr::lock() to access private constructor
    */
-  template <typename>
-  friend class WeakPtr;
+  template <typename> friend class WeakPtr;
 
- public:
+public:
   using element_type = T;
 
- private:
-  element_type* ptr_;  ///< Stored pointer to the managed object
+private:
+  element_type *ptr_; ///< Stored pointer to the managed object
 
   /**
    * @brief Private constructor for WeakPtr::lock().
@@ -258,11 +257,12 @@ class SharedPtr<T> : public SharedPtrBase {
    * @param p Pointer to the managed object.
    * @param block Control block to share.
    */
-  SharedPtr(T* p, CbBase* block) noexcept : SharedPtrBase{block}, ptr_{p} {
-    if (cb_ != nullptr) cb_->AddRef();
+  SharedPtr(T *p, CbBase *block) noexcept : SharedPtrBase{block}, ptr_{p} {
+    if (cb_ != nullptr)
+      cb_->AddRef();
   }
 
- public:
+public:
   // ========================================================================
   // Constructors and destructor
   // ========================================================================
@@ -286,7 +286,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  explicit SharedPtr(T* p)
+  explicit SharedPtr(T *p)
       : SharedPtrBase(p ? new CbRegular<T>(p) : nullptr), ptr_(p) {}
 
   /**
@@ -297,7 +297,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @throws std::bad_alloc If control block allocation fails.
    */
   template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter&& d)
+  SharedPtr(std::nullptr_t, Deleter &&d)
       : SharedPtrBase(new CbRegular<T, std::decay_t<Deleter>>(
             nullptr, std::forward<Deleter>(d))) {}
 
@@ -312,7 +312,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <std::move_constructible Deleter>
-  SharedPtr(T* p, Deleter&& d)
+  SharedPtr(T *p, Deleter &&d)
       : SharedPtrBase(p ? new CbRegular<T, std::decay_t<Deleter>>(
                               p, std::forward<Deleter>(d))
                         : nullptr),
@@ -325,7 +325,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @details Increments the reference count.
    */
-  SharedPtr(const SharedPtr& other) noexcept
+  SharedPtr(const SharedPtr &other) noexcept
       : SharedPtrBase(other), ptr_(other.ptr_) {}
 
   /**
@@ -338,9 +338,9 @@ class SharedPtr<T> : public SharedPtrBase {
    *          Supports polymorphic conversions (Derived* to Base*).
    */
   template <NotArray U>
-  SharedPtr(const SharedPtr<U>& other) noexcept
+  SharedPtr(const SharedPtr<U> &other) noexcept
       : SharedPtrBase(other), ptr_(other.Get()) {
-    static_assert(std::is_convertible_v<U*, T*>,
+    static_assert(std::is_convertible_v<U *, T *>,
                   "U* must be convertible to T*");
   }
 
@@ -351,7 +351,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @details The other object becomes empty.
    */
-  SharedPtr(SharedPtr&& other) noexcept
+  SharedPtr(SharedPtr &&other) noexcept
       : SharedPtrBase(std::move(other)),
         ptr_{std::exchange(other.ptr_, nullptr)} {}
 
@@ -373,7 +373,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @details Uses copy-and-swap idiom for strong exception safety.
    *          Works for both copy and move assignment.
    */
-  SharedPtr& operator=(SharedPtr other) noexcept {
+  SharedPtr &operator=(SharedPtr other) noexcept {
     Swap(other);
     return *this;
   }
@@ -404,8 +404,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @details The previous object is released.
    */
-  template <ConvertibleAndComplete<T> Y>
-  void Reset(Y* p) {
+  template <ConvertibleAndComplete<T> Y> void Reset(Y *p) {
     SharedPtr<T> tmp{p};
     Swap(tmp);
   }
@@ -420,7 +419,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @return T& Reference to the managed object.
    * @warning Undefined behavior if the pointer is nullptr.
    */
-  element_type& operator*() const noexcept { return *Get(); }
+  element_type &operator*() const noexcept { return *Get(); }
 
   /**
    * @brief Accesses members of the managed object.
@@ -428,7 +427,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @return T* Pointer to the managed object.
    * @warning Undefined behavior if the pointer is nullptr.
    */
-  element_type* operator->() const noexcept { return Get(); }
+  element_type *operator->() const noexcept { return Get(); }
 
   /**
    * @brief Checks if the shared pointer owns an object.
@@ -442,7 +441,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @return T* The stored pointer (may be nullptr).
    */
-  element_type* Get() const noexcept { return ptr_; }
+  element_type *Get() const noexcept { return ptr_; }
 
   // ========================================================================
   // Modifiers
@@ -453,7 +452,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @param other The SharedPtr to swap with.
    */
-  void Swap(SharedPtr& other) noexcept {
+  void Swap(SharedPtr &other) noexcept {
     SharedPtrBase::Swap(other);
     std::swap(ptr_, other.ptr_);
   }
@@ -473,24 +472,22 @@ class SharedPtr<T> : public SharedPtrBase {
  * - Uses delete[] by default
  *
  */
-template <Array T>
-class SharedPtr<T> : public SharedPtrBase {
- public:
+template <Array T> class SharedPtr<T> : public SharedPtrBase {
+public:
   using element_type = std::remove_extent_t<T>;
 
- private:
+private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
    * Required for WeakPtr::lock() to access private constructor
    */
-  template <typename>
-  friend class WeakPtr;
+  template <typename> friend class WeakPtr;
 
   using default_deleter = std::default_delete<element_type[]>;
 
- private:
-  element_type* ptr_;  ///< Pointer to the first element of the array
+private:
+  element_type *ptr_; ///< Pointer to the first element of the array
 
   /**
    * @brief Private constructor for WeakPtr::lock().
@@ -498,12 +495,13 @@ class SharedPtr<T> : public SharedPtrBase {
    * @param p Pointer to the first element.
    * @param block Control block to share.
    */
-  SharedPtr(element_type* p, CbBase* block) noexcept
+  SharedPtr(element_type *p, CbBase *block) noexcept
       : SharedPtrBase{block}, ptr_{p} {
-    if (cb_ != nullptr) cb_->AddRef();
+    if (cb_ != nullptr)
+      cb_->AddRef();
   }
 
- public:
+public:
   // ========================================================================
   // Constructors and destructor
   // ========================================================================
@@ -527,7 +525,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @warning The pointer must be allocated with `new[]`.
    */
-  explicit SharedPtr(element_type* p)
+  explicit SharedPtr(element_type *p)
       : SharedPtrBase(p ? new CbRegular<element_type, default_deleter>(
                               p, default_deleter{})
                         : nullptr),
@@ -541,7 +539,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @throws std::bad_alloc If control block allocation fails.
    */
   template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter&& d)
+  SharedPtr(std::nullptr_t, Deleter &&d)
       : SharedPtrBase(new CbRegular<element_type, std::decay_t<Deleter>>(
             nullptr, std::forward<Deleter>(d))) {}
 
@@ -556,7 +554,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <std::move_constructible Deleter>
-  SharedPtr(element_type* p, Deleter&& d)
+  SharedPtr(element_type *p, Deleter &&d)
       : SharedPtrBase(p ? new CbRegular<element_type, std::decay_t<Deleter>>(
                               p, std::forward<Deleter>(d))
                         : nullptr),
@@ -567,7 +565,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @param other The SharedPtr to copy.
    */
-  SharedPtr(const SharedPtr& other) noexcept
+  SharedPtr(const SharedPtr &other) noexcept
       : SharedPtrBase(other), ptr_(other.ptr_) {}
 
   /**
@@ -577,10 +575,10 @@ class SharedPtr<T> : public SharedPtrBase {
    * @param other The SharedPtr to copy.
    */
   template <Array U>
-  SharedPtr(const SharedPtr<U>& other) noexcept
+  SharedPtr(const SharedPtr<U> &other) noexcept
       : SharedPtrBase(other), ptr_(other.Get()) {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types are not convertible");
   }
 
@@ -589,7 +587,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @param other The SharedPtr to move from.
    */
-  SharedPtr(SharedPtr&& other) noexcept
+  SharedPtr(SharedPtr &&other) noexcept
       : SharedPtrBase(std::move(other)),
         ptr_{std::exchange(other.ptr_, nullptr)} {}
 
@@ -608,7 +606,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @param other The SharedPtr to assign from.
    * @return SharedPtr& Reference to this object.
    */
-  SharedPtr& operator=(SharedPtr other) noexcept {
+  SharedPtr &operator=(SharedPtr other) noexcept {
     Swap(other);
     return *this;
   }
@@ -632,9 +630,9 @@ class SharedPtr<T> : public SharedPtrBase {
    * @param p New raw pointer to manage.
    */
   template <typename Y>
-    requires std::is_convertible_v<Y*, element_type*>
-  void Reset(Y* p) {
-    SharedPtr<T> tmp{p};  // can throw
+    requires std::is_convertible_v<Y *, element_type *>
+  void Reset(Y *p) {
+    SharedPtr<T> tmp{p}; // can throw
     Swap(tmp);
   }
 
@@ -654,7 +652,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @return T* Pointer to the first element (may be nullptr).
    */
-  element_type* Get() const noexcept { return ptr_; }
+  element_type *Get() const noexcept { return ptr_; }
 
   /**
    * @brief Accesses an element of the array.
@@ -663,7 +661,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @return T& Reference to the element.
    * @warning Undefined behavior if idx is out of bounds.
    */
-  element_type& operator[](std::ptrdiff_t idx) const { return Get()[idx]; }
+  element_type &operator[](std::ptrdiff_t idx) const { return Get()[idx]; }
 
   // ========================================================================
   // Modifiers
@@ -674,7 +672,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @param other The SharedPtr to swap with.
    */
-  void Swap(SharedPtr& other) noexcept {
+  void Swap(SharedPtr &other) noexcept {
     SharedPtrBase::Swap(other);
     std::swap(ptr_, other.ptr_);
   }
@@ -684,7 +682,7 @@ class SharedPtr<T> : public SharedPtrBase {
  * @brief ADL Swap for all specializations
  */
 template <typename T>
-inline void swap(SharedPtr<T>& a, SharedPtr<T>& b) noexcept {
+inline void swap(SharedPtr<T> &a, SharedPtr<T> &b) noexcept {
   a.Swap(b);
 }
 
@@ -708,34 +706,34 @@ inline void swap(SharedPtr<T>& a, SharedPtr<T>& b) noexcept {
  *
  * @see SharedPtr
  */
-template <typename T>
-class WeakPtr {
- private:
-  template <typename>
-  friend class WeakPtr;
+template <typename T> class WeakPtr {
+private:
+  template <typename> friend class WeakPtr;
 
- public:
+public:
   // Underlying type for arrays
   using element_type = std::remove_extent_t<T>;
 
- private:
-  CbBase* cb_;  ///< Pointer to the control block
+private:
+  CbBase *cb_; ///< Pointer to the control block
 
   /**
    * @brief Increments the weak reference count.
    */
   void AddWeak() noexcept {
-    if (cb_ != nullptr) cb_->AddWeak();
+    if (cb_ != nullptr)
+      cb_->AddWeak();
   }
 
   /**
    * @brief Decrements the weak reference count.
    */
   void ReleaseWeak() noexcept {
-    if (cb_ != nullptr) cb_->ReleaseWeak();
+    if (cb_ != nullptr)
+      cb_->ReleaseWeak();
   }
 
- public:
+public:
   // ========================================================================
   // Constructors and destructor
   // ========================================================================
@@ -755,7 +753,7 @@ class WeakPtr {
    *
    * @param other The WeakPtr to copy.
    */
-  WeakPtr(const WeakPtr& other) noexcept : cb_{other.cb_} { AddWeak(); }
+  WeakPtr(const WeakPtr &other) noexcept : cb_{other.cb_} { AddWeak(); }
 
   /**
    * @brief Converting copy constructor.
@@ -764,9 +762,9 @@ class WeakPtr {
    * @param other The WeakPtr to copy.
    */
   template <typename U>
-  WeakPtr(const WeakPtr<U>& other) noexcept : cb_{other.cb_} {
+  WeakPtr(const WeakPtr<U> &other) noexcept : cb_{other.cb_} {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types must be convertible");
     AddWeak();
   }
@@ -779,9 +777,9 @@ class WeakPtr {
    */
   template <typename U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
-  WeakPtr(const SharedPtr<U>& shared) noexcept : cb_{shared.cb_} {
+  WeakPtr(const SharedPtr<U> &shared) noexcept : cb_{shared.cb_} {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types must be convertible");
     AddWeak();
   }
@@ -791,7 +789,7 @@ class WeakPtr {
    *
    * @param other The WeakPtr to move from.
    */
-  WeakPtr(WeakPtr&& other) noexcept : cb_{std::exchange(other.cb_, nullptr)} {}
+  WeakPtr(WeakPtr &&other) noexcept : cb_{std::exchange(other.cb_, nullptr)} {}
 
   /**
    * @brief Converting move constructor.
@@ -801,10 +799,10 @@ class WeakPtr {
    */
   template <typename U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
-  WeakPtr(WeakPtr<U>&& other) noexcept
+  WeakPtr(WeakPtr<U> &&other) noexcept
       : cb_{std::exchange(other.cb_, nullptr)} {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types must be convertible");
   }
 
@@ -825,7 +823,7 @@ class WeakPtr {
    * @param other The WeakPtr to assign from.
    * @return WeakPtr& Reference to this object.
    */
-  WeakPtr& operator=(WeakPtr other) noexcept {
+  WeakPtr &operator=(WeakPtr other) noexcept {
     Swap(other);
     return *this;
   }
@@ -839,9 +837,9 @@ class WeakPtr {
    */
   template <class U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
-  WeakPtr& operator=(WeakPtr<U> other) noexcept {
+  WeakPtr &operator=(WeakPtr<U> other) noexcept {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types must be convertible");
     Swap(other);
     return *this;
@@ -856,9 +854,9 @@ class WeakPtr {
    */
   template <class U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
-  WeakPtr& operator=(const SharedPtr<U>& shared) noexcept {
+  WeakPtr &operator=(const SharedPtr<U> &shared) noexcept {
     using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element*, element_type*>,
+    static_assert(std::is_convertible_v<U_element *, element_type *>,
                   "Element types must be convertible");
     WeakPtr temp(shared);
     Swap(temp);
@@ -884,7 +882,7 @@ class WeakPtr {
    *
    * @param other The WeakPtr to swap with.
    */
-  void Swap(WeakPtr& other) noexcept { std::swap(cb_, other.cb_); }
+  void Swap(WeakPtr &other) noexcept { std::swap(cb_, other.cb_); }
 
   // ========================================================================
   // Observers
@@ -917,7 +915,7 @@ class WeakPtr {
     if (Expired()) {
       return SharedPtr<T>{};
     } else {
-      element_type* ptr_ = static_cast<element_type*>(cb_->data_ptr());
+      element_type *ptr_ = static_cast<element_type *>(cb_->data_ptr());
       return SharedPtr<T>{ptr_, cb_};
     }
   }
@@ -927,7 +925,7 @@ class WeakPtr {
  * @brief Swap for ADL.
  */
 template <typename T>
-inline void swap(WeakPtr<T>& lhs, WeakPtr<T>& rhs) noexcept {
+inline void swap(WeakPtr<T> &lhs, WeakPtr<T> &rhs) noexcept {
   lhs.Swap(rhs);
 }
 
@@ -943,7 +941,7 @@ inline void swap(WeakPtr<T>& lhs, WeakPtr<T>& rhs) noexcept {
  * @return std::strong_ordering Three-way comparison result.
  */
 template <typename T, typename U>
-auto operator<=>(const SharedPtr<T>& lhs, const SharedPtr<U>& rhs) noexcept {
+auto operator<=>(const SharedPtr<T> &lhs, const SharedPtr<U> &rhs) noexcept {
   return std::compare_three_way{}(lhs.Get(), rhs.Get());
 }
 
@@ -955,7 +953,7 @@ auto operator<=>(const SharedPtr<T>& lhs, const SharedPtr<U>& rhs) noexcept {
  * @return true If both point to the same object.
  */
 template <typename T, typename U>
-bool operator==(const SharedPtr<T>& lhs, const SharedPtr<U>& rhs) noexcept {
+bool operator==(const SharedPtr<T> &lhs, const SharedPtr<U> &rhs) noexcept {
   return lhs.Get() == rhs.Get();
 }
 
@@ -966,7 +964,7 @@ bool operator==(const SharedPtr<T>& lhs, const SharedPtr<U>& rhs) noexcept {
  * @return true If the SharedPtr is empty.
  */
 template <typename T>
-bool operator==(const SharedPtr<T>& lhs, std::nullptr_t) noexcept {
+bool operator==(const SharedPtr<T> &lhs, std::nullptr_t) noexcept {
   return !lhs;
 }
 
@@ -977,8 +975,8 @@ bool operator==(const SharedPtr<T>& lhs, std::nullptr_t) noexcept {
  * @return std::strong_ordering Three-way comparison result.
  */
 template <typename T>
-auto operator<=>(const SharedPtr<T>& ptr, std::nullptr_t) noexcept {
+auto operator<=>(const SharedPtr<T> &ptr, std::nullptr_t) noexcept {
   return std::compare_three_way{}(
-      ptr.Get(), static_cast<SharedPtr<T>::element_type*>(nullptr));
+      ptr.Get(), static_cast<SharedPtr<T>::element_type *>(nullptr));
 }
-}  // namespace my::memory
+} // namespace my::memory
