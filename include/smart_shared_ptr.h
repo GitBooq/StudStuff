@@ -237,6 +237,7 @@ class SharedPtr {
  */
 template <NotArray T>
 class SharedPtr<T> : public SharedPtrBase {
+ private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
@@ -245,8 +246,11 @@ class SharedPtr<T> : public SharedPtrBase {
   template <typename>
   friend class WeakPtr;
 
+ public:
+  using element_type = T;
+
  private:
-  T* ptr_;  ///< Stored pointer to the managed object
+  element_type* ptr_;  ///< Stored pointer to the managed object
 
   /**
    * @brief Private constructor for WeakPtr::lock().
@@ -416,7 +420,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @return T& Reference to the managed object.
    * @warning Undefined behavior if the pointer is nullptr.
    */
-  T& operator*() const noexcept { return *Get(); }
+  element_type& operator*() const noexcept { return *Get(); }
 
   /**
    * @brief Accesses members of the managed object.
@@ -424,7 +428,7 @@ class SharedPtr<T> : public SharedPtrBase {
    * @return T* Pointer to the managed object.
    * @warning Undefined behavior if the pointer is nullptr.
    */
-  T* operator->() const noexcept { return Get(); }
+  element_type* operator->() const noexcept { return Get(); }
 
   /**
    * @brief Checks if the shared pointer owns an object.
@@ -438,7 +442,7 @@ class SharedPtr<T> : public SharedPtrBase {
    *
    * @return T* The stored pointer (may be nullptr).
    */
-  T* Get() const noexcept { return ptr_; }
+  element_type* Get() const noexcept { return ptr_; }
 
   // ========================================================================
   // Modifiers
@@ -471,6 +475,10 @@ class SharedPtr<T> : public SharedPtrBase {
  */
 template <Array T>
 class SharedPtr<T> : public SharedPtrBase {
+ public:
+  using element_type = std::remove_extent_t<T>;
+
+ private:
   /**
    * @brief All WeakPtr specializations have access to private members
    *
@@ -479,7 +487,6 @@ class SharedPtr<T> : public SharedPtrBase {
   template <typename>
   friend class WeakPtr;
 
-  using element_type = std::remove_extent_t<T>;
   using default_deleter = std::default_delete<element_type[]>;
 
  private:
@@ -678,7 +685,7 @@ class SharedPtr<T> : public SharedPtrBase {
  */
 template <typename T>
 inline void swap(SharedPtr<T>& a, SharedPtr<T>& b) noexcept {
-  a.swap(b);
+  a.Swap(b);
 }
 
 // ============================================================================
@@ -703,9 +710,11 @@ inline void swap(SharedPtr<T>& a, SharedPtr<T>& b) noexcept {
  */
 template <typename T>
 class WeakPtr {
+ private:
   template <typename>
   friend class WeakPtr;
 
+ public:
   // Underlying type for arrays
   using element_type = std::remove_extent_t<T>;
 
@@ -968,8 +977,8 @@ bool operator==(const SharedPtr<T>& lhs, std::nullptr_t) noexcept {
  * @return std::strong_ordering Three-way comparison result.
  */
 template <typename T>
-auto operator<=>(const SharedPtr<T>& ptr_, std::nullptr_t) noexcept {
+auto operator<=>(const SharedPtr<T>& ptr, std::nullptr_t) noexcept {
   return std::compare_three_way{}(
-      ptr_.Get(), static_cast<SharedPtr<T>::element_type*>(nullptr));
+      ptr.Get(), static_cast<SharedPtr<T>::element_type*>(nullptr));
 }
 }  // namespace my::memory

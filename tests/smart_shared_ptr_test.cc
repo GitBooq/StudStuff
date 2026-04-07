@@ -1,15 +1,30 @@
-#include "smart_shared_ptr.h"  // for SharedPtr, WeakPtr, operator==, operator<=>
+#include "smart_shared_ptr.h" // for SharedPtr, WeakPtr, operator==, operator<=>
 
-#include <gtest/gtest.h>  // for Test, Message, TestPartResult, EXPECT_EQ
+#include <gtest/gtest.h> // for Test, Message, TestPartResult, EXPECT_EQ
 
-#include <compare>    // for operator<, strong_ordering
-#include <map>        // for map
-#include <stdexcept>  // for runtime_error
-#include <string>     // for allocator, string
-#include <utility>    // for swap, move
-#include <vector>     // for vector
+#include <map>       // for map
+#include <stdexcept> // for runtime_error
+#include <string>    // for allocator, string
+#include <utility>   // for swap, move
+#include <vector>    // for vector
 
 using namespace my::memory;
+
+// Explicitly instantiate templates for testing
+namespace my::memory {
+template class SharedPtr<int>;
+template class SharedPtr<int[]>;
+
+template auto operator<=>(const SharedPtr<int> &lhs,
+                          const SharedPtr<int> &rhs) noexcept;
+template bool operator==(const SharedPtr<int> &lhs,
+                         const SharedPtr<int> &rhs) noexcept;
+template bool operator==(const SharedPtr<int> &lhs, std::nullptr_t) noexcept;
+template auto operator<=>(const SharedPtr<int> &ptr, std::nullptr_t) noexcept;
+
+template void swap(SharedPtr<int> &a, SharedPtr<int> &b);
+template void swap(WeakPtr<int> &lhs, WeakPtr<int> &rhs);
+} // namespace my::memory
 
 // Helper class for testing purposes
 struct TObj {
@@ -19,14 +34,14 @@ struct TObj {
   inline static int copy_cnt{0};
   inline static int move_cnt{0};
 
-  TObj(int v = 0) : value(v) { ++ctor_cnt; }
+  explicit TObj(int val = 0) : value(val) { ++ctor_cnt; }
 
-  TObj(const TObj& other) : value(other.value) {
+  TObj(const TObj &other) : value(other.value) {
     ++copy_cnt;
     ++ctor_cnt;
   }
 
-  TObj(TObj&& other) noexcept : value(other.value) {
+  TObj(TObj &&other) noexcept : value(other.value) {
     ++move_cnt;
     ++ctor_cnt;
     other.value = 0;
@@ -62,7 +77,7 @@ TEST(SharedPtrTest, DefaultConstructor) {
 TEST(SharedPtrTest, ConstructorFromRawPointer) {
   TObj::ResetCounters();
 
-  auto* raw = new TObj(42);
+  auto *raw = new TObj(42);
   {
     SharedPtr<TObj> ptr(raw);
     EXPECT_EQ(ptr.Get(), raw);
@@ -83,10 +98,10 @@ TEST(SharedPtrTest, ConstructorFromNullptr) {
 }
 
 TEST(SharedPtrTest, ConstructorFromNullptrWithCustomDeleter) {
-  auto custom_deleter = [](int* ptr) { delete ptr; };
+  auto custom_deleter = [](int *ptr) { delete ptr; };
   SharedPtr<int> ptr(nullptr, custom_deleter);
   EXPECT_EQ(ptr.Get(), nullptr);
-  EXPECT_EQ(ptr.use_count(), 1);  // cblock to store custom deleter
+  EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
 }
 
 TEST(SharedPtrTest, CopyConstructor) {
@@ -114,7 +129,7 @@ TEST(SharedPtrTest, MoveConstructor) {
   TObj::ResetCounters();
 
   SharedPtr<TObj> ptr1(new TObj(42));
-  auto* raw = ptr1.Get();
+  auto *raw = ptr1.Get();
 
   SharedPtr<TObj> ptr2(std::move(ptr1));
 
@@ -141,7 +156,7 @@ TEST(SharedPtrTest, CopyAssignment) {
 
 TEST(SharedPtrTest, CopyAssignmentSelfAssignment) {
   SharedPtr<int> ptr(new int(42));
-  auto* raw = ptr.Get();
+  auto *raw = ptr.Get();
   auto cnt = ptr.use_count();
 
   ptr = ptr;
@@ -156,7 +171,7 @@ TEST(SharedPtrTest, MoveAssignment) {
 
   SharedPtr<TObj> ptr1(new TObj(42));
   SharedPtr<TObj> ptr2(new TObj(100));
-  auto* raw = ptr1.Get();
+  auto *raw = ptr1.Get();
 
   ptr2 = std::move(ptr1);
 
@@ -184,7 +199,7 @@ TEST(SharedPtrTest, ResetToNewPointer) {
   TObj::ResetCounters();
 
   SharedPtr<TObj> ptr(new TObj(42));
-  auto* raw1 = ptr.Get();
+  auto *raw1 = ptr.Get();
 
   ptr.Reset(new TObj(100));
 
@@ -246,8 +261,8 @@ TEST(SharedPtrTest, Swap) {
   SharedPtr<int> ptr1(new int(42));
   SharedPtr<int> ptr2(new int(100));
 
-  auto* raw1 = ptr1.Get();
-  auto* raw2 = ptr2.Get();
+  auto *raw1 = ptr1.Get();
+  auto *raw2 = ptr2.Get();
 
   std::swap(ptr1, ptr2);
 
@@ -263,7 +278,7 @@ TEST(SharedPtrTest, SwapWithEmpty) {
   SharedPtr<int> ptr1(new int(42));
   SharedPtr<int> ptr2;
 
-  auto* raw1 = ptr1.Get();
+  auto *raw1 = ptr1.Get();
 
   ptr1.Swap(ptr2);
 
@@ -278,7 +293,7 @@ TEST(SharedPtrTest, ArrayConstructor) {
   EXPECT_EQ(ptr[0], 1);
   EXPECT_EQ(ptr[1], 2);
   EXPECT_EQ(ptr[2], 3);
-  EXPECT_EQ(ptr.Get(), static_cast<int*>(ptr.Get()));
+  EXPECT_EQ(ptr.Get(), static_cast<int *>(ptr.Get()));
 }
 
 TEST(SharedPtrTest, ArrayReset) {
@@ -288,14 +303,14 @@ TEST(SharedPtrTest, ArrayReset) {
 
   EXPECT_EQ(ptr[0], 4);
   EXPECT_EQ(ptr[1], 5);
-  EXPECT_EQ(ptr.Get(), static_cast<int*>(ptr.Get()));
+  EXPECT_EQ(ptr.Get(), static_cast<int *>(ptr.Get()));
 
   SharedPtr<int[]> ptr2(ptr);
 }
 
 TEST(SharedPtrTest, ArrayMove) {
   SharedPtr<int[]> ptr1(new int[3]{1, 2, 3});
-  auto* raw = ptr1.Get();
+  auto *raw = ptr1.Get();
 
   SharedPtr<int[]> ptr2(std::move(ptr1));
 
@@ -306,7 +321,7 @@ TEST(SharedPtrTest, ArrayMove) {
 
 TEST(SharedPtrTest, Polymorphism) {
   SharedPtr<Derived> derived_ptr(new Derived());
-  auto* raw = derived_ptr.Get();
+  auto *raw = derived_ptr.Get();
 
   SharedPtr<Base> base_ptr(derived_ptr);
 
@@ -406,7 +421,7 @@ TEST(SharedPtrTest, ComparisonOperators) {
   SharedPtr<int> ptr1(new int(42));
   SharedPtr<int> ptr2(ptr1);
   SharedPtr<int> ptr3(new int(100));
-  SharedPtr<int> ptr4;  // nullptr
+  SharedPtr<int> ptr4; // nullptr
 
   EXPECT_TRUE(ptr1 == ptr2);
   EXPECT_FALSE(ptr1 == ptr3);
@@ -646,9 +661,9 @@ TEST(SharedPtrTest, BreakCyclicDependencies) {
 
 TEST(SharedPtrCompareTest, EqualityAndInequality) {
   SharedPtr<int> p1(new int(42));
-  SharedPtr<int> p2(new int(42));  // different pointer, same value
-  SharedPtr<int> p3(p1);           // same pointer as p1
-  SharedPtr<int> p4;               // empty
+  SharedPtr<int> p2(new int(42)); // different pointer, same value
+  SharedPtr<int> p3(p1);          // same pointer as p1
+  SharedPtr<int> p4;              // empty
 
   // Same pointer -> equal
   EXPECT_TRUE(p1 == p3);
@@ -689,8 +704,8 @@ TEST(SharedPtrCompareTest, NullptrComparison) {
 TEST(SharedPtrCompareTest, ThreeWayComparison) {
   SharedPtr<int> p1(new int(42));
   SharedPtr<int> p2(new int(100));
-  SharedPtr<int> p3(p1);  // same as p1
-  SharedPtr<int> p4;      // empty
+  SharedPtr<int> p3(p1); // same as p1
+  SharedPtr<int> p4;     // empty
 
   // Order is based on memory addresses
   if (p1.Get() < p2.Get()) {
@@ -729,9 +744,9 @@ TEST(SharedPtrCompareTest, ThreeWayComparison) {
 TEST(SharedPtrCompareTest, PolymorphicComparisons) {
   SharedPtr<Derived> derived1(new Derived());
   SharedPtr<Derived> derived2(new Derived());
-  SharedPtr<Base> base1(derived1);  // points to same as derived1
+  SharedPtr<Base> base1(derived1); // points to same as derived1
   SharedPtr<Base> base2(new Base());
-  SharedPtr<Base> base3;  // empty
+  SharedPtr<Base> base3; // empty
 
   // Check that pointers are different
   EXPECT_NE(derived1.Get(), derived2.Get());
@@ -766,9 +781,9 @@ TEST(SharedPtrCompareTest, PolymorphicComparisons) {
 
 TEST(SharedPtrCompareTest, ArrayComparisons) {
   SharedPtr<int[]> arr1(new int[5]{1, 2, 3, 4, 5});
-  SharedPtr<int[]> arr2(new int[5]{1, 2, 3, 4, 5});  // different array
-  SharedPtr<int[]> arr3(arr1);                       // same as arr1
-  SharedPtr<int[]> arr4;                             // empty
+  SharedPtr<int[]> arr2(new int[5]{1, 2, 3, 4, 5}); // different array
+  SharedPtr<int[]> arr3(arr1);                      // same as arr1
+  SharedPtr<int[]> arr4;                            // empty
 
   // Equality
   EXPECT_TRUE(arr1 == arr3);
@@ -831,5 +846,5 @@ TEST(SharedPtrCompareTest, ComparisonAfterReset) {
 
   p2.Reset();
   EXPECT_TRUE(p2 == nullptr);
-  EXPECT_TRUE(p1 == p2);  // both empty
+  EXPECT_TRUE(p1 == p2); // both empty
 }
