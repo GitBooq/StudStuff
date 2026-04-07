@@ -19,19 +19,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 include_directories(${INCLUDE_DIR})
-add_library(shared_ptr_lib INTERFACE)
+add_library(SharedPtrLib INTERFACE)
 
-target_include_directories(shared_ptr_lib INTERFACE
+target_include_directories(SharedPtrLib INTERFACE
     ${INCLUDE_DIR}
 )
 
 if (ENABLE_SANITIZERS)
-    target_compile_options(shared_ptr_lib INTERFACE
+    target_compile_options(SharedPtrLib INTERFACE
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
         -g
     )
-    target_link_options(shared_ptr_lib INTERFACE
+    target_link_options(SharedPtrLib INTERFACE
         -fsanitize=address,undefined
     )
 endif()
@@ -41,7 +41,10 @@ endif()
 include(FetchContent)
 FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/refs/heads/main.zip
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.17.0
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

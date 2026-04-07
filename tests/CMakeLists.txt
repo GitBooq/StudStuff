@@ -1,17 +1,17 @@
-add_executable(tests_sharedPtr
-    test_shared_ptr.cpp
+add_executable(SharedPtrTest
+    shared_ptr_test.cc
 )
 
-target_link_libraries(tests_sharedPtr
-    shared_ptr_lib
+target_link_libraries(SharedPtrTest
+    SharedPtrLib
     GTest::gtest_main
 )
 
-target_compile_options(tests_sharedPtr PRIVATE
+target_compile_options(SharedPtrTest PRIVATE
     -O0
     -g
 )
 
 include(GoogleTest)
-gtest_discover_tests(tests_sharedPtr)
+gtest_discover_tests(SharedPtrTest)
 
