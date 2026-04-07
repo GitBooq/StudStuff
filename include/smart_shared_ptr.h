@@ -108,8 +108,9 @@ protected:
    * @brief Increments the strong reference count.
    */
   void AddRef() noexcept {
-    if (cb_ != nullptr)
+    if (cb_ != nullptr) {
       cb_->AddRef();
+    }
   }
 
   /**
@@ -119,8 +120,9 @@ protected:
    * if the count reaches zero.
    */
   void Release() noexcept {
-    if (cb_ != nullptr)
+    if (cb_ != nullptr) {
       cb_->Release();
+    }
   }
 
   /**
@@ -144,7 +146,7 @@ public:
    *
    * @param b Pointer to the control block (may be nullptr).
    */
-  explicit constexpr SharedPtrBase(CbBase *b) noexcept : cb_(b) {}
+  explicit constexpr SharedPtrBase(CbBase *cblock) noexcept : cb_(cblock) {}
 
   /**
    * @brief Copy constructor.
@@ -257,9 +259,10 @@ private:
    * @param p Pointer to the managed object.
    * @param block Control block to share.
    */
-  SharedPtr(T *p, CbBase *block) noexcept : SharedPtrBase{block}, ptr_{p} {
-    if (cb_ != nullptr)
+  SharedPtr(T *ptr, CbBase *block) noexcept : SharedPtrBase{block}, ptr_{ptr} {
+    if (cb_ != nullptr) {
       cb_->AddRef();
+    }
   }
 
 public:
@@ -274,6 +277,7 @@ public:
 
   /**
    * @brief Constructs an empty SharedPtr from nullptr.
+   * @note Allow implicit conversion
    */
   constexpr SharedPtr(std::nullptr_t) noexcept : SharedPtr() {}
 
@@ -286,8 +290,8 @@ public:
    *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  explicit SharedPtr(T *p)
-      : SharedPtrBase(p ? new CbRegular<T>(p) : nullptr), ptr_(p) {}
+  explicit SharedPtr(T *ptr)
+      : SharedPtrBase(ptr ? new CbRegular<T>(ptr) : nullptr), ptr_(ptr) {}
 
   /**
    * @brief Constructs a SharedPtr from nullptr and custom deleter.
@@ -297,9 +301,9 @@ public:
    * @throws std::bad_alloc If control block allocation fails.
    */
   template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter &&d)
+  SharedPtr(std::nullptr_t, Deleter &&del)
       : SharedPtrBase(new CbRegular<T, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(d))) {}
+            nullptr, std::forward<Deleter>(del))) {}
 
   /**
    * @brief Constructs a SharedPtr from a raw pointer and custom deleter.
@@ -312,11 +316,11 @@ public:
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <std::move_constructible Deleter>
-  SharedPtr(T *p, Deleter &&d)
-      : SharedPtrBase(p ? new CbRegular<T, std::decay_t<Deleter>>(
-                              p, std::forward<Deleter>(d))
-                        : nullptr),
-        ptr_(p) {}
+  SharedPtr(T *ptr, Deleter &&del)
+      : SharedPtrBase(ptr ? new CbRegular<T, std::decay_t<Deleter>>(
+                                ptr, std::forward<Deleter>(del))
+                          : nullptr),
+        ptr_(ptr) {}
 
   /**
    * @brief Copy constructor.
@@ -333,6 +337,8 @@ public:
    *
    * @tparam U Type of the other SharedPtr.
    * @param other The SharedPtr to copy.
+   *
+   * @note Allow implicit conversion
    *
    * @details Enabled only if U* is convertible to T*.
    *          Supports polymorphic conversions (Derived* to Base*).
@@ -404,8 +410,8 @@ public:
    *
    * @details The previous object is released.
    */
-  template <ConvertibleAndComplete<T> Y> void Reset(Y *p) {
-    SharedPtr<T> tmp{p};
+  template <ConvertibleAndComplete<T> Y> void Reset(Y *ptr) {
+    SharedPtr<T> tmp{ptr};
     Swap(tmp);
   }
 
@@ -486,7 +492,6 @@ private:
 
   using default_deleter = std::default_delete<element_type[]>;
 
-private:
   element_type *ptr_; ///< Pointer to the first element of the array
 
   /**
@@ -495,10 +500,11 @@ private:
    * @param p Pointer to the first element.
    * @param block Control block to share.
    */
-  SharedPtr(element_type *p, CbBase *block) noexcept
-      : SharedPtrBase{block}, ptr_{p} {
-    if (cb_ != nullptr)
+  SharedPtr(element_type *ptr, CbBase *block) noexcept
+      : SharedPtrBase{block}, ptr_{ptr} {
+    if (cb_ != nullptr) {
       cb_->AddRef();
+    }
   }
 
 public:
@@ -513,6 +519,8 @@ public:
 
   /**
    * @brief Constructs an empty SharedPtr from nullptr.
+   *
+   * @note Allow implicit conversion.
    */
   constexpr SharedPtr(std::nullptr_t) noexcept : SharedPtr() {}
 
@@ -525,11 +533,11 @@ public:
    *
    * @warning The pointer must be allocated with `new[]`.
    */
-  explicit SharedPtr(element_type *p)
-      : SharedPtrBase(p ? new CbRegular<element_type, default_deleter>(
-                              p, default_deleter{})
-                        : nullptr),
-        ptr_(p) {}
+  explicit SharedPtr(element_type *ptr)
+      : SharedPtrBase(ptr ? new CbRegular<element_type, default_deleter>(
+                                ptr, default_deleter{})
+                          : nullptr),
+        ptr_(ptr) {}
 
   /**
    * @brief Constructs a SharedPtr from a nullptr and a custom deleter.
@@ -539,9 +547,9 @@ public:
    * @throws std::bad_alloc If control block allocation fails.
    */
   template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter &&d)
+  SharedPtr(std::nullptr_t, Deleter &&del)
       : SharedPtrBase(new CbRegular<element_type, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(d))) {}
+            nullptr, std::forward<Deleter>(del))) {}
 
   /**
    * @brief Constructs a SharedPtr from an array pointer and a custom deleter.
@@ -554,11 +562,11 @@ public:
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <std::move_constructible Deleter>
-  SharedPtr(element_type *p, Deleter &&d)
-      : SharedPtrBase(p ? new CbRegular<element_type, std::decay_t<Deleter>>(
-                              p, std::forward<Deleter>(d))
-                        : nullptr),
-        ptr_(p) {}
+  SharedPtr(element_type *ptr, Deleter &&del)
+      : SharedPtrBase(ptr ? new CbRegular<element_type, std::decay_t<Deleter>>(
+                                ptr, std::forward<Deleter>(del))
+                          : nullptr),
+        ptr_(ptr) {}
 
   /**
    * @brief Copy constructor.
@@ -573,6 +581,8 @@ public:
    *
    * @tparam U Type of the other SharedPtr.
    * @param other The SharedPtr to copy.
+   *
+   * @note Allow implicit conversion.
    */
   template <Array U>
   SharedPtr(const SharedPtr<U> &other) noexcept
@@ -631,8 +641,8 @@ public:
    */
   template <typename Y>
     requires std::is_convertible_v<Y *, element_type *>
-  void Reset(Y *p) {
-    SharedPtr<T> tmp{p}; // can throw
+  void Reset(Y *ptr) {
+    SharedPtr<T> tmp{ptr}; // can throw
     Swap(tmp);
   }
 
@@ -679,11 +689,12 @@ public:
 };
 
 /**
- * @brief ADL Swap for all specializations
+ * @brief
+ *
  */
 template <typename T>
-inline void swap(SharedPtr<T> &a, SharedPtr<T> &b) noexcept {
-  a.Swap(b);
+inline void swap(SharedPtr<T> &first, SharedPtr<T> &second) noexcept {
+  first.Swap(second);
 }
 
 // ============================================================================
@@ -721,16 +732,18 @@ private:
    * @brief Increments the weak reference count.
    */
   void AddWeak() noexcept {
-    if (cb_ != nullptr)
+    if (cb_ != nullptr) {
       cb_->AddWeak();
+    }
   }
 
   /**
    * @brief Decrements the weak reference count.
    */
   void ReleaseWeak() noexcept {
-    if (cb_ != nullptr)
+    if (cb_ != nullptr) {
       cb_->ReleaseWeak();
+    }
   }
 
 public:
@@ -745,6 +758,8 @@ public:
 
   /**
    * @brief Constructs an empty WeakPtr from nullptr.
+   *
+   * @note Allow implicit conversion.
    */
   constexpr WeakPtr(std::nullptr_t) noexcept : WeakPtr() {}
 
@@ -760,6 +775,8 @@ public:
    *
    * @tparam U Type of the other WeakPtr.
    * @param other The WeakPtr to copy.
+   *
+   * @note Allow implicit conversion.
    */
   template <typename U>
   WeakPtr(const WeakPtr<U> &other) noexcept : cb_{other.cb_} {
@@ -774,6 +791,8 @@ public:
    *
    * @tparam U Type of the shared pointer.
    * @param shared The SharedPtr to observe.
+   *
+   * @note Allow implicit conversion.
    */
   template <typename U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
@@ -796,6 +815,8 @@ public:
    *
    * @tparam U Type of the other WeakPtr.
    * @param other The WeakPtr to move from.
+   *
+   * @note Allow implicit conversion.
    */
   template <typename U>
     requires(std::is_array_v<T> == std::is_array_v<U>)
@@ -914,10 +935,9 @@ public:
   SharedPtr<T> Lock() const noexcept {
     if (Expired()) {
       return SharedPtr<T>{};
-    } else {
-      element_type *ptr_ = static_cast<element_type *>(cb_->data_ptr());
-      return SharedPtr<T>{ptr_, cb_};
     }
+    element_type *ptr_ = static_cast<element_type *>(cb_->data_ptr());
+    return SharedPtr<T>{ptr_, cb_};
   }
 };
 
