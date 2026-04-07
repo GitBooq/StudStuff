@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <memory> // for default_delete
 #include <tuple>
@@ -167,6 +168,7 @@ public:
    * @param d Deleter functor (default constructed if omitted).
    */
   explicit CbRegular(T *ptr, Deleter del = Deleter{})
+    requires(std::invocable<Deleter, T *> && std::move_constructible<Deleter>)
       : ptr_{ptr}, deleter_tup_(std::move(del)) {}
 
   /**

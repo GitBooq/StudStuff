@@ -60,6 +60,22 @@ concept CompatibleSmartPtr = requires {
                                  typename To::element_type *>;
 };
 
+template <typename T, typename Deleter>
+concept InvocableAndMoveConstructible =
+    std::invocable<Deleter, T *> && std::move_constructible<Deleter>;
+
+/**
+ * @brief Check weak ptr convertability
+ * Check if weak ptr underlying types are same (array/not array) and
+ *  can be converted.
+ * @tparam From
+ * @tparam To
+ */
+template <typename From, typename To>
+concept WeakPtrConvertible = (std::is_array_v<From> == std::is_array_v<To>) &&
+                             (std::convertible_to<std::remove_extent_t<From> *,
+                                                  std::remove_extent_t<To> *>);
+
 /**
  * @brief T is not array
  */
@@ -144,7 +160,7 @@ public:
   /**
    * @brief Constructs a SharedPtrBase from a control block.
    *
-   * @param b Pointer to the control block (may be nullptr).
+   * @param cblock Pointer to the control block (may be nullptr).
    */
   explicit constexpr SharedPtrBase(CbBase *cblock) noexcept : cb_(cblock) {}
 
@@ -256,10 +272,11 @@ private:
   /**
    * @brief Private constructor for WeakPtr::Lock().
    *
-   * @param p Pointer to the managed object.
+   * @param ptr Pointer to the managed object.
    * @param block Control block to share.
    */
-  SharedPtr(T *ptr, CbBase *block) noexcept : SharedPtrBase{block}, ptr_{ptr} {
+  SharedPtr(element_type *ptr, CbBase *block) noexcept
+      : SharedPtrBase{block}, ptr_{ptr} {
     if (cb_ != nullptr) {
       cb_->AddRef();
     }
@@ -284,43 +301,46 @@ public:
   /**
    * @brief Constructs a SharedPtr from a raw pointer.
    *
-   * @param p Raw pointer to manage.
+   * @param ptr Raw pointer to manage.
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  explicit SharedPtr(T *ptr)
-      : SharedPtrBase(ptr ? new CbRegular<T>(ptr) : nullptr), ptr_(ptr) {}
+  explicit SharedPtr(element_type *ptr)
+      : SharedPtrBase(ptr ? new CbRegular<element_type>(ptr) : nullptr),
+        ptr_(ptr) {}
 
   /**
    * @brief Constructs a SharedPtr from nullptr and custom deleter.
    *
-   * @param d Deleter.
+   * @param del Deleter (by value).
    *
    * @throws std::bad_alloc If control block allocation fails.
    */
-  template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter &&del)
-      : SharedPtrBase(new CbRegular<T, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(del))),
+  template <typename Deleter>
+    requires InvocableAndMoveConstructible<element_type, Deleter>
+  SharedPtr(std::nullptr_t, Deleter del)
+      : SharedPtrBase(
+            new CbRegular<element_type, Deleter>(nullptr, std::move(del))),
         ptr_(nullptr) {}
 
   /**
    * @brief Constructs a SharedPtr from a raw pointer and custom deleter.
    *
-   * @param p Raw pointer to manage.
-   * @param d Deleter.
+   * @param ptr Raw pointer to manage.
+   * @param del Deleter (by value).
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  template <std::move_constructible Deleter>
-  SharedPtr(T *ptr, Deleter &&del)
-      : SharedPtrBase(ptr ? new CbRegular<T, std::decay_t<Deleter>>(
-                                ptr, std::forward<Deleter>(del))
-                          : nullptr),
+  template <typename Deleter>
+    requires InvocableAndMoveConstructible<element_type, Deleter>
+  SharedPtr(element_type *ptr, Deleter del)
+      : SharedPtrBase(
+            ptr ? new CbRegular<element_type, Deleter>(ptr, std::move(del))
+                : nullptr),
         ptr_(ptr) {}
 
   /**
@@ -411,7 +431,9 @@ public:
    *
    * @details The previous object is released.
    */
-  template <ConvertibleAndComplete<T> Y> void Reset(Y *ptr) {
+  template <typename Y>
+    requires ConvertibleAndComplete<Y, T>
+  void Reset(Y *ptr) {
     SharedPtr<T> tmp{ptr};
     Swap(tmp);
   }
@@ -498,7 +520,7 @@ private:
   /**
    * @brief Private constructor for WeakPtr::Lock().
    *
-   * @param p Pointer to the first element.
+   * @param ptr Pointer to the first element.
    * @param block Control block to share.
    */
   SharedPtr(element_type *ptr, CbBase *block) noexcept
@@ -528,7 +550,7 @@ public:
   /**
    * @brief Constructs a SharedPtr from a raw array pointer.
    *
-   * @param p Raw pointer to the array.
+   * @param ptr Raw pointer to the array.
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
@@ -543,31 +565,33 @@ public:
   /**
    * @brief Constructs a SharedPtr from a nullptr and a custom deleter.
    *
-   * @param d Deleter.
+   * @param del Deleter (by value).
    *
    * @throws std::bad_alloc If control block allocation fails.
    */
-  template <std::move_constructible Deleter>
-  SharedPtr(std::nullptr_t, Deleter &&del)
-      : SharedPtrBase(new CbRegular<element_type, std::decay_t<Deleter>>(
-            nullptr, std::forward<Deleter>(del))),
+  template <typename Deleter>
+    requires InvocableAndMoveConstructible<element_type, Deleter>
+  SharedPtr(std::nullptr_t, Deleter del)
+      : SharedPtrBase(
+            new CbRegular<element_type, Deleter>(nullptr, std::move(del))),
         ptr_(nullptr) {}
 
   /**
    * @brief Constructs a SharedPtr from an array pointer and a custom deleter.
    *
-   * @param p Pointer to the first element of the array to manage.
-   * @param d Deleter.
+   * @param ptr Pointer to the first element of the array to manage.
+   * @param del Deleter.
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  template <std::move_constructible Deleter>
-  SharedPtr(element_type *ptr, Deleter &&del)
-      : SharedPtrBase(ptr ? new CbRegular<element_type, std::decay_t<Deleter>>(
-                                ptr, std::forward<Deleter>(del))
-                          : nullptr),
+  template <typename Deleter>
+    requires InvocableAndMoveConstructible<element_type, Deleter>
+  SharedPtr(element_type *ptr, Deleter del)
+      : SharedPtrBase(
+            ptr ? new CbRegular<element_type, Deleter>(ptr, std::move(del))
+                : nullptr),
         ptr_(ptr) {}
 
   /**
@@ -642,7 +666,7 @@ public:
    * @param p New raw pointer to manage.
    */
   template <typename Y>
-    requires std::is_convertible_v<Y *, element_type *>
+    requires std::convertible_to<Y *, element_type *>
   void Reset(Y *ptr) {
     SharedPtr<T> tmp{ptr}; // can throw
     Swap(tmp);
@@ -670,7 +694,7 @@ public:
    * @brief Accesses an element of the array.
    *
    * @param idx Index of the element.
-   * @return T& Reference to the element.
+   * @return element_type& Reference to the element.
    * @warning Undefined behavior if idx is out of bounds.
    */
   element_type &operator[](std::ptrdiff_t idx) const { return Get()[idx]; }
@@ -781,10 +805,8 @@ public:
    * @note Allow implicit conversion.
    */
   template <typename U>
+    requires WeakPtrConvertible<U, T>
   WeakPtr(const WeakPtr<U> &other) noexcept : cb_{other.cb_} {
-    using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element *, element_type *>,
-                  "Element types must be convertible");
     AddWeak();
   }
 
@@ -797,11 +819,8 @@ public:
    * @note Allow implicit conversion.
    */
   template <typename U>
-    requires(std::is_array_v<T> == std::is_array_v<U>)
+    requires WeakPtrConvertible<U, T>
   WeakPtr(const SharedPtr<U> &shared) noexcept : cb_{shared.cb_} {
-    using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element *, element_type *>,
-                  "Element types must be convertible");
     AddWeak();
   }
 
@@ -821,13 +840,9 @@ public:
    * @note Allow implicit conversion.
    */
   template <typename U>
-    requires(std::is_array_v<T> == std::is_array_v<U>)
+    requires WeakPtrConvertible<U, T>
   WeakPtr(WeakPtr<U> &&other) noexcept
-      : cb_{std::exchange(other.cb_, nullptr)} {
-    using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element *, element_type *>,
-                  "Element types must be convertible");
-  }
+      : cb_{std::exchange(other.cb_, nullptr)} {}
 
   /**
    * @brief Destructor.
@@ -859,11 +874,8 @@ public:
    * @return WeakPtr& Reference to this object.
    */
   template <class U>
-    requires(std::is_array_v<T> == std::is_array_v<U>)
+    requires WeakPtrConvertible<U, T>
   WeakPtr &operator=(WeakPtr<U> other) noexcept {
-    using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element *, element_type *>,
-                  "Element types must be convertible");
     Swap(other);
     return *this;
   }
@@ -876,11 +888,8 @@ public:
    * @return WeakPtr& Reference to this object.
    */
   template <class U>
-    requires(std::is_array_v<T> == std::is_array_v<U>)
+    requires WeakPtrConvertible<U, T>
   WeakPtr &operator=(const SharedPtr<U> &shared) noexcept {
-    using U_element = std::remove_extent_t<U>;
-    static_assert(std::is_convertible_v<U_element *, element_type *>,
-                  "Element types must be convertible");
     WeakPtr temp(shared);
     Swap(temp);
     return *this;

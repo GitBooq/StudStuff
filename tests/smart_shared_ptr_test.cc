@@ -97,11 +97,48 @@ TEST(SharedPtrTest, ConstructorFromNullptr) {
   EXPECT_EQ(ptr.use_count(), 0);
 }
 
-TEST(SharedPtrTest, ConstructorFromNullptrWithCustomDeleter) {
+TEST(SharedPtrTest, ConstructorFromNullptrWithCustomDeleterNotArray) {
   auto custom_deleter = [](int *ptr) { delete ptr; };
+
   SharedPtr<int> ptr(nullptr, custom_deleter);
   EXPECT_EQ(ptr.Get(), nullptr);
   EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+}
+
+TEST(SharedPtrTest, ConstructorFromNullptrWithCustomDeleterArray) {
+  auto custom_deleter = [](int *ptr) { delete[] ptr; };
+
+  SharedPtr<int[]> ptr(nullptr, custom_deleter);
+  EXPECT_EQ(ptr.Get(), nullptr);
+  EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+}
+
+TEST(SharedPtrTest, ConstructorFromPtrWithCustomDeleterNotArray) {
+  auto custom_deleter = [](int *ptr) { delete ptr; };
+
+  SharedPtr<int> ptr(new int(42), custom_deleter);
+  EXPECT_EQ(*ptr.Get(), 42);
+  EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+}
+
+TEST(SharedPtrTest, ConstructorFromPtrWithCustomDeleterArray) {
+  auto custom_deleter = [](int *ptr) { delete[] ptr; };
+
+  SharedPtr<int[]> ptr(new int[]{1, 2, 3}, custom_deleter);
+  EXPECT_EQ(ptr[2], 3);
+  EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+}
+
+TEST(SharedPtrTest, CopyPtrWithDeleterExpired) {
+  SharedPtr<int> ptr;
+  {
+    auto custom_deleter = [](int *ptr) { delete ptr; };
+    SharedPtr<int> tmp(new int(42), custom_deleter);
+    ptr = tmp;
+  }
+  EXPECT_EQ(*ptr.Get(), 42);
+  EXPECT_EQ(ptr.use_count(), 1); // cblock to store custom deleter
+  // no memleak
 }
 
 TEST(SharedPtrTest, CopyConstructor) {
