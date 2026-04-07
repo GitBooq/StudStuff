@@ -1,4 +1,4 @@
-#include "shared_ptr.h"  // for SharedPtr, WeakPtr, operator==, operator<=>
+#include "smart_shared_ptr.h"  // for SharedPtr, WeakPtr, operator==, operator<=>
 
 #include <gtest/gtest.h>  // for Test, Message, TestPartResult, EXPECT_EQ
 

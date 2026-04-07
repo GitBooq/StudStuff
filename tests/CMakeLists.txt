@@ -1,5 +1,5 @@
 add_executable(SharedPtrTest
-    shared_ptr_test.cc
+    smart_shared_ptr_test.cc
 )
 
 target_link_libraries(SharedPtrTest

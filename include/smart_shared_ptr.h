@@ -1,5 +1,5 @@
 /**
- * @file shared_ptr.h
+ * @file smart_shared_ptr.h
  * @brief SharedPtr and WeakPtr implementation with reference counting.
  *
  * This file contains the implementation of shared_ptr and weak_ptr
