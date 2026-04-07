@@ -202,15 +202,6 @@ class SharedPtrBase {
   size_t use_count() const noexcept {
     return (cb_ != nullptr) ? cb_->use_count() : 0;
   }
-
-  /**
-   * @brief Checks if the shared pointer owns an object.
-   *
-   * @return true if the shared pointer is not empty.
-   */
-  explicit operator bool() const noexcept {
-    return cb_ && cb_->use_count() > 0;
-  }
 };
 
 // SharedPtr - Primary dummy template
@@ -436,6 +427,13 @@ class SharedPtr<T> : public SharedPtrBase {
   T* operator->() const noexcept { return Get(); }
 
   /**
+   * @brief Checks if the shared pointer owns an object.
+   *
+   * @return true if the shared pointer stores non-null pointer, false otherwise
+   */
+  explicit operator bool() const noexcept { return Get() != nullptr; }
+
+  /**
    * @brief Returns the stored pointer.
    *
    * @return T* The stored pointer (may be nullptr).
@@ -636,6 +634,13 @@ class SharedPtr<T> : public SharedPtrBase {
   // ========================================================================
   // Observers
   // ========================================================================
+
+  /**
+   * @brief Checks if the shared pointer owns an object.
+   *
+   * @return true if the shared pointer stores non-null pointer, false otherwise
+   */
+  explicit operator bool() const noexcept { return Get() != nullptr; }
 
   /**
    * @brief Returns the stored pointer.
