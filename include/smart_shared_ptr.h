@@ -305,11 +305,18 @@ public:
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
+   * @note If an exception occurs, calls delete ptr
+   *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
-  explicit SharedPtr(element_type *ptr)
+  explicit SharedPtr(element_type *ptr) try
       : SharedPtrBase(ptr ? new CbRegular<element_type>(ptr) : nullptr),
-        ptr_(ptr) {}
+        ptr_(ptr) {
+
+  } catch (...) {
+    delete ptr;
+    throw; // explicit
+  }
 
   /**
    * @brief Constructs a SharedPtr from nullptr and custom deleter.
@@ -333,15 +340,21 @@ public:
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
+   * @note If an exception occurs, calls del(ptr)
+   *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <typename Deleter>
     requires InvocableAndMoveConstructible<element_type, Deleter>
-  SharedPtr(element_type *ptr, Deleter del)
+  SharedPtr(element_type *ptr, Deleter del) try
       : SharedPtrBase(
             ptr ? new CbRegular<element_type, Deleter>(ptr, std::move(del))
                 : nullptr),
-        ptr_(ptr) {}
+        ptr_(ptr) {
+  } catch (...) {
+    del(ptr);
+    throw; // explicit
+  }
 
   /**
    * @brief Copy constructor.
@@ -554,13 +567,19 @@ public:
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
+   * @note If an exception occurs, calls delete[] ptr
+   *
    * @warning The pointer must be allocated with `new[]`.
    */
-  explicit SharedPtr(element_type *ptr)
+  explicit SharedPtr(element_type *ptr) try
       : SharedPtrBase(ptr ? new CbRegular<element_type, default_deleter>(
                                 ptr, default_deleter{})
                           : nullptr),
-        ptr_(ptr) {}
+        ptr_(ptr) {
+  } catch (...) {
+    default_deleter{}(ptr);
+    throw; // explicit
+  }
 
   /**
    * @brief Constructs a SharedPtr from a nullptr and a custom deleter.
@@ -584,15 +603,21 @@ public:
    *
    * @throws std::bad_alloc If control block allocation fails.
    *
+   * @note If an exception occurs, calls del(ptr).
+   *
    * @warning The pointer must be allocated with `new` (or compatible).
    */
   template <typename Deleter>
     requires InvocableAndMoveConstructible<element_type, Deleter>
-  SharedPtr(element_type *ptr, Deleter del)
+  SharedPtr(element_type *ptr, Deleter del) try
       : SharedPtrBase(
             ptr ? new CbRegular<element_type, Deleter>(ptr, std::move(del))
                 : nullptr),
-        ptr_(ptr) {}
+        ptr_(ptr) {
+  } catch (...) {
+    del(ptr);
+    throw; // explicit
+  }
 
   /**
    * @brief Copy constructor.
