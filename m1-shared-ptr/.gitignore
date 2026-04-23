@@ -1,0 +1,7 @@
+debug.txt
+iwyu_script.txt
+build/
+docs/
+.vscode/
+Doxyfile
+.clang-tidy
