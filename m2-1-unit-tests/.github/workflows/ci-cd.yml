@@ -1,0 +1,40 @@
+name: CI Pipeline for C++ Project
+
+on: [push, pull_request]
+
+jobs:
+  build-and-test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake
+
+      - name: Configure (Release)
+        run: cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (Release)
+        run: cmake --build build/release -j 2
+
+      - name: Run Tests (Release)
+        run: cd build/release && ctest --output-on-failure
+
+  build-and-test-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake
+
+      - name: Configure (Debug)
+        run: cmake -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build (Debug)
+        run: cmake --build build/debug -j 2
+
+      - name: Run Tests (Debug)
+        run: cd build/debug && ctest --output-on-failure
