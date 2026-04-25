@@ -76,6 +76,7 @@ Self-balancing binary search tree with guaranteed `O(log n)` complexity for inse
 | `Insert(key)` | Insert an element |
 | `Find(key)` | Find an element |
 | `Remove(key)` | Remove all elements with given key |
+| `Remove(pos)` | Remove element pointed by iterator |
 | `Print(ostream)` | Print elements inorder |
 | `size()` / `empty()` | Current container size |
 | `Clear()` | Clear the tree |
@@ -133,7 +134,7 @@ Hash table with chaining collision resolution using `std::list`.
 | Method | Description |
 |--------|-------------|
 | `Insert(key, value)` | Insert or update element |
-| `Find(key, value)` | Find value by key |
+| `Find(key)` | Find value by key |
 | `Remove(key)` | Remove element by key |
 | `Rehash(count)` | Force rehash (≥ `count` buckets) |
 | `size()` / `empty()` | Current size |
@@ -152,9 +153,13 @@ int main() {
     scores.Insert("Bob", 85);
     scores.Insert("Charlie", 92);
 
-    int aliceScore;
-    if (scores.Find("Alice", aliceScore)) {
-        std::cout << "Alice: " << aliceScore << std::endl;  // Alice: 100
+
+    auto print_score = [&](std::string_view name, int score) {
+        std::cout << std::format("{}: {}", name, score) << std::endl;
+    };
+
+    if (auto aliceScore = scores.Find("Alice")) {
+        print_score("Alice", aliceScore.value()); // Alice: 100
     }
 
     if (!scores.empty()) {
