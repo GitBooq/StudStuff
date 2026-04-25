@@ -47,6 +47,9 @@ class RedBlackTree {
   static_assert(std::is_default_constructible_v<Compare>,
                 "Compare must be default constructible");
 
+private:
+  using NodeType = RBNode<Key>;
+
 public:
   //============
   // Interface
@@ -57,7 +60,6 @@ public:
   using reference = const value_type &; // const
   using const_reference = const value_type &;
   using difference_type = std::ptrdiff_t;
-  using NodeType = RBNode<Key>;
 
   RedBlackTree() noexcept(std::is_nothrow_default_constructible_v<Compare>) =
       default;
