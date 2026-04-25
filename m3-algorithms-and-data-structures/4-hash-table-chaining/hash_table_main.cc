@@ -8,9 +8,12 @@ int main() {
   scores.Insert("Bob", 85);
   scores.Insert("Charlie", 92);
 
-  int aliceScore;
-  if (scores.Find("Alice", aliceScore)) {
-    std::cout << "Alice: " << aliceScore << std::endl;
+  auto print_score = [&](std::string_view name, int score) {
+    std::cout << std::format("{}: {}", name, score) << std::endl;
+  };
+
+  if (auto aliceScore = scores.Find("Alice")) {
+    print_score("Alice", aliceScore.value());
   }
 
   if (!scores.empty()) {

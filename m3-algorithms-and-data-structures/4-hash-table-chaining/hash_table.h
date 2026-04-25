@@ -55,8 +55,15 @@ public:
    */
   void Insert(const K &key, const V &value);
 
-  /// Return true if oject with specified %key exist, false otherwise
-  bool Find(const K &key, V &value) const;
+  /**
+   * @brief Finds value associated with the given key.
+   *
+   * @param Key The key to search for
+   * @return std::optional<V>
+   *         - Contains a copy of the value if the key exists
+   *         - std::nullopt if the key is not found
+   */
+  std::optional<V> Find(const K &key) const;
 
   /// Remove object with specified %key
   bool Remove(const K &key);
@@ -90,13 +97,14 @@ void HashTable<K, V>::Insert(const K &key, const V &value) {
 }
 
 template <typename K, typename V>
-bool HashTable<K, V>::Find(const K &key, V &value) const {
+std::optional<V> HashTable<K, V>::Find(const K &key) const
+{
   auto [_, iter, found] = FindEntry(key);
-  if (found) {
-    value = iter->value;
+  if (!found) {
+    return std::nullopt;
   }
 
-  return found;
+  return iter->value;
 }
 
 template <typename K, typename V> bool HashTable<K, V>::Remove(const K &key) {
