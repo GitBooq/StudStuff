@@ -7,7 +7,7 @@
 
 namespace ranges = std::ranges;
 
-auto FillVector(std::vector<int> &vec, const auto &generator) {
+void FillVector(std::vector<int> &vec, const auto &generator) {
   ranges::generate(vec, generator);
 }
 

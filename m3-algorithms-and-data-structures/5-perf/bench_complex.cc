@@ -49,7 +49,7 @@ template <std::integral T = int> T RandomNumber() {
 }
 
 template <std::integral T>
-auto FillVector(std::vector<T> &vec, const auto &generator) {
+void FillVector(std::vector<T> &vec, const auto &generator) {
   std::ranges::generate(vec, generator);
 }
 
