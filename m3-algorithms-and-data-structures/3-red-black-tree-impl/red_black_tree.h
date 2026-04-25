@@ -5,6 +5,11 @@
 #include <ostream>
 #include <utility>
 
+// Forward declare
+namespace test {
+class RBTreeChecker; // for testing
+}
+
 namespace RBTree {
 enum class Color { kRed, kBlack };
 
@@ -128,6 +133,11 @@ public:
    */
   std::size_t Remove(value_type key) noexcept;
 
+  /// Remove element by iterator. Return iterator to successor
+  [[nodiscard]] Iterator Remove(ConstIterator pos) noexcept {
+    return Erase(pos);
+  };
+
   /// Inorder print tree nodes to cout
   void Print(std::ostream &ostream = std::cout) const
     requires requires(std::ostream &ostream, value_type key) { ostream << key; }
@@ -174,9 +184,13 @@ private:
    * @brief Balance tree after deleting black node
    * @note Root is always black; No two consecutive red nodes; All paths from
    * root to leafs contain same amount of black nodes.
-   * @param node
+   * @param node The node that replaced deleted node
+   * @param parent Parent of node
+   * @param node_was_left True if node was left child of deleted node, false
+   * otherwise
    */
-  void RemoveFixup(NodeType *node) noexcept;
+  void RemoveFixup(NodeType *node, NodeType *parent,
+                   bool node_was_left) noexcept;
 
   /// Return color of the node. Root(nullptr) is black
   [[nodiscard]] static Color ColorOf(NodeType *node) noexcept {
@@ -261,6 +275,8 @@ private:
    * @return NodeType*
    */
   NodeType *CopyRecursive(const NodeType *node, NodeType *parent);
+
+  friend class test::RBTreeChecker;
 };
 
 // ===============
@@ -466,14 +482,28 @@ void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
   NodeType *x = nullptr; // the child that replaces y (may be nullptr)
   Color original_color = y->color;
 
+  // Additional info for fixup as workaround for algorithm w/o NIL sentinel
+  NodeType *parent_for_fixup = nullptr;
+  bool x_is_left_for_fixup = false;
+
   // Case 1: No left child
   if (node->left == nullptr) {
     x = node->right;
+
+    // Save parent and direction for fixup(when x == nullptr)
+    parent_for_fixup = node->parent;
+    x_is_left_for_fixup = (parent_for_fixup && node == parent_for_fixup->left);
+
     Transplant(node, node->right);
   }
   // Case 2: No right child
   else if (node->right == nullptr) {
     x = node->left;
+
+    // Save parent and direction
+    parent_for_fixup = node->parent;
+    x_is_left_for_fixup = (parent_for_fixup && node == parent_for_fixup->left);
+
     Transplant(node, node->left);
   }
   // Case 3: Two children
@@ -485,12 +515,21 @@ void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
 
     // If y is direct child of node
     if (y->parent == node) {
-      if (x)
-        x->parent = y;         // x becomes child of y
+      if (x) {
+        x->parent = y; // x becomes child of y
+      }
+
+      // Save parent and direction
+      parent_for_fixup = y;
+      x_is_left_for_fixup = false;
     } else {                   // y is somewhere deeper in right subtree
       Transplant(y, y->right); //  Extract y from its position
       y->right = node->right;  // Move node's right child to y
       y->right->parent = y;
+
+      // Save parent and direction
+      parent_for_fixup = y->parent;
+      x_is_left_for_fixup = (parent_for_fixup && y == parent_for_fixup->left);
     }
 
     // Replace node with y
@@ -507,65 +546,83 @@ void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
 
   // Fix tree if the deleted node was black
   if (original_color == Color::kBlack) {
-    RemoveFixup(x);
+    RemoveFixup(x, parent_for_fixup, x_is_left_for_fixup);
   }
 }
 
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
-void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *node) noexcept {
-  if (node == nullptr) {
-    return;
-  }
-  while (node != root_ && ColorOf(node) == Color::kBlack) {
-    NodeType *parent = node->parent;
-    bool left = (node == parent->left); // node direction related to parent
-    bool right = !left;                 // opposite direction
+void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *node, NodeType *parent,
+                                             bool node_was_left) noexcept {
+  while ((node == nullptr || node->color == Color::kBlack) && node != root_ &&
+         parent != nullptr) {
+    bool left = node_was_left;
+    bool right = !left;
 
-    NodeType *&sibling = GetChild(parent, right);
-    if (sibling == nullptr) {
-      node = parent;
-      continue;
-    }
+    // Determine node's sibling
+    NodeType *sibling = left ? parent->right : parent->left;
+
     // Case 1: Red sibling
-    if (ColorOf(sibling) == Color::kRed) {
+    if (sibling && sibling->color == Color::kRed) {
       sibling->color = Color::kBlack;
       parent->color = Color::kRed;
-      Rotate(parent, left);              // rotate to node
-      sibling = GetChild(parent, right); // update sibling
-    }
-    // Case 2: Black siblings
-    if (ColorOf(sibling->left) == Color::kBlack &&
-        ColorOf(sibling->right) == Color::kBlack) {
-      sibling->color = Color::kRed;
-      node = parent; // move up
-    } else {
-      bool outer_black = (left ? ColorOf(sibling->right) == Color::kBlack
-                               : ColorOf(sibling->left) == Color::kBlack);
-      // Case 3: Black outer nephew
-      if (outer_black) {
-        // Recolor inner nephew and sibling, rotate sibling
-        NodeType *&inner_nephew = GetChild(sibling, left);
-        if (inner_nephew) {
-          inner_nephew->color = Color::kBlack;
-        }
-        sibling->color = Color::kRed;
-        Rotate(sibling, right);            // opposite rotatation
-        sibling = GetChild(parent, right); // update sibling
-      }
-      // Case 4: Red outer nephew
-      sibling->color = parent->color;
-      parent->color = Color::kBlack;
-      NodeType *&outer_nephew = GetChild(sibling, right);
-      if (outer_nephew) {
-        outer_nephew->color = Color::kBlack;
-      }
       Rotate(parent, left);
-      node = root_; // end cycle
+      // Update sibling after rotation
+      sibling = left ? parent->right : parent->left;
     }
+
+    // Case 2: Both siblings are black(or NIL)
+    if ((sibling == nullptr || ColorOf(sibling->left) == Color::kBlack) &&
+        (sibling == nullptr || ColorOf(sibling->right) == Color::kBlack)) {
+
+      if (sibling) {
+        sibling->color = Color::kRed;
+      }
+
+      // Go up the tree
+      node = parent;
+      parent = node->parent;
+      left = (parent && node == parent->left);
+
+      continue;
+    }
+
+    // Case 3: Black outer nephew
+    bool outer_nephew_black = left ? ColorOf(sibling->right) == Color::kBlack
+                                   : ColorOf(sibling->left) == Color::kBlack;
+
+    if (outer_nephew_black) {
+      // Recolor inner nephew and sibling
+      NodeType *&inner_nephew = left ? sibling->left : sibling->right;
+      if (inner_nephew) {
+        inner_nephew->color = Color::kBlack;
+      }
+
+      sibling->color = Color::kRed;
+      Rotate(sibling, right);
+
+      // Update sibling
+      sibling = left ? parent->right : parent->left;
+    }
+
+    // Case 4: Red outer nephew
+    sibling->color = parent->color;
+    parent->color = Color::kBlack;
+
+    NodeType *&outer_nephew = left ? sibling->right : sibling->left;
+    if (outer_nephew) {
+      outer_nephew->color = Color::kBlack;
+    }
+
+    Rotate(parent, left);
+
+    node = root_;
+    parent = nullptr;
+    break;
   }
+
   // root is always black
-  if (node != nullptr) {
+  if (node) {
     node->color = Color::kBlack;
   }
 }
