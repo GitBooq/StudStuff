@@ -50,10 +50,11 @@ public:
    * @brief Insert new object into the hash table if it is not there otherwise
    * update existing object's value with specified by %value
    * @note May lead to table rehashing
+   * @tparam Value Value type to perfect forward
    * @param key
-   * @param value
+   * @param value Universal reference to value that will be inserted
    */
-  void Insert(const K &key, const V &value);
+  template <typename Value> void Insert(const K &key, Value &&value);
 
   /**
    * @brief Finds value associated with the given key.
@@ -82,12 +83,13 @@ public:
 };
 
 template <typename K, typename V>
-void HashTable<K, V>::Insert(const K &key, const V &value) {
+template <typename Value>
+void HashTable<K, V>::Insert(const K &key, Value &&value) {
   auto [index, iter, found] = FindEntry(key);
   if (found) {
-    iter->value = value;
+    iter->value = std::forward<Value>(value);
   } else {
-    table_[index].emplace_back(key, value);
+    table_[index].emplace_back(key, std::forward<Value>(value));
     ++size_;
 
     if (size_ > capacity_ * kLoadFactor) {
@@ -97,8 +99,7 @@ void HashTable<K, V>::Insert(const K &key, const V &value) {
 }
 
 template <typename K, typename V>
-std::optional<V> HashTable<K, V>::Find(const K &key) const
-{
+std::optional<V> HashTable<K, V>::Find(const K &key) const {
   auto [_, iter, found] = FindEntry(key);
   if (!found) {
     return std::nullopt;
