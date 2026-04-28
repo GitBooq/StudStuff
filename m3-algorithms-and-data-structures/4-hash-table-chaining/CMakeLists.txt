@@ -1,0 +1,2 @@
+add_executable(HashTable hash_table_main.cc)
+target_compile_features(HashTable PRIVATE cxx_std_23)
