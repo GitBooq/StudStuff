@@ -1,7 +1,9 @@
+#include <cassert>
 #include <concepts>
 #include <functional>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <ostream>
 #include <utility>
 
@@ -67,7 +69,7 @@ public:
 
   /// Deep copy ctor
   RedBlackTree(const RedBlackTree &other)
-      : root_(CopyRecursive(other.root_, nullptr)), size_(other.size_),
+      : root_(CopyRecursive(other.root_, nil_)), size_(other.size_),
         comp_(other.comp_) {}
 
   /// Deep copy assignment
@@ -78,7 +80,7 @@ public:
   }
 
   RedBlackTree(RedBlackTree &&other) noexcept
-      : root_(std::exchange(other.root_, nullptr)),
+      : root_(std::exchange(other.root_, nil_)),
         size_(std::exchange(other.size_, 0)), comp_(std::move(other.comp_)) {}
 
   RedBlackTree &operator=(RedBlackTree &&other) noexcept {
@@ -93,16 +95,16 @@ public:
   using Iterator = BasicIterator<false>;
   using ConstIterator = BasicIterator<true>;
 
-  Iterator begin() { return Iterator(GetMinimum(root_)); }
-  Iterator end() { return Iterator(nullptr); }
+  Iterator begin() noexcept { return Iterator(GetMinimum(root_), nil_); }
+  Iterator end() noexcept { return Iterator(nil_); }
   ConstIterator begin() const noexcept {
-    return ConstIterator(GetMinimum(root_));
+    return ConstIterator(GetMinimum(root_), nil_);
   }
-  ConstIterator end() const noexcept { return ConstIterator(nullptr); }
+  ConstIterator end() const noexcept { return ConstIterator(nil_); }
   ConstIterator cbegin() const noexcept {
-    return ConstIterator(GetMinimum(root_));
+    return ConstIterator(GetMinimum(root_), nil_);
   }
-  ConstIterator cend() const noexcept { return ConstIterator(nullptr); }
+  ConstIterator cend() const noexcept { return ConstIterator(nil_); }
 
   /**
    * @brief Insert element with specified key into tree
@@ -114,8 +116,7 @@ public:
   template <typename K> Iterator Insert(K &&val);
 
   /**
-   * @brief Find element with specified key, if several elements with this key
-   * exist, return any of them
+   * @brief Find element with specified key
    *
    * @param key
    * @return Iterator
@@ -128,7 +129,7 @@ public:
   }
 
   /**
-   * @brief Remove all elements with equal key
+   * @brief Remove element with equal key
    *
    * @param key
    * @return size_type Number of elements removed
@@ -140,7 +141,56 @@ public:
     return Erase(pos);
   };
 
-  /// Inorder print tree nodes to cout
+  /// Return iterator to first node with key >= specified key
+  [[nodiscard]] Iterator LowerBound(const value_type &key) noexcept {
+    auto result = LowerBoundImpl(key);
+    return (result != nil_) ? Iterator(result, nil_) : end();
+  }
+
+  /// Return const iterator to first node with key >= specified key
+  [[nodiscard]] ConstIterator LowerBound(const value_type &key) const noexcept {
+    auto result = LowerBoundImpl(key);
+    return (result != nil_) ? ConstIterator(result, nil_) : cend();
+  }
+
+  /// Return iterator to first node with key > specified key
+  [[nodiscard]] Iterator UpperBound(const value_type &key) noexcept {
+    auto result = UpperBoundImpl(key);
+    return (result != nil_) ? Iterator(result, nil_) : end();
+  }
+  /// Return const iterator to first node with key > specified key
+  [[nodiscard]] ConstIterator UpperBound(const value_type &key) const noexcept {
+    auto result = UpperBoundImpl(key);
+    return (result != nil_) ? ConstIterator(result, nil_) : cend();
+  }
+
+  [[nodiscard]] std::pair<Iterator, Iterator>
+  EqualRange(const value_type &key) noexcept { // for non const obj
+
+    auto first = LowerBound(key);
+    auto last = UpperBound(key);
+
+    assert((first.nil_ == nil_) && (last.nil_ == nil_));
+
+    return {first, last};
+  }
+
+  /// Return iterators pair(range) of nodes with equal keys
+  [[nodiscard]] std::pair<ConstIterator, ConstIterator>
+  EqualRange(const value_type &key) const noexcept {
+    auto first = LowerBound(key);
+    auto last = UpperBound(key);
+
+    assert((first.nil_ == nil_) && (last.nil_ == nil_));
+
+    return {first, last};
+  }
+
+  /// Erase element by iterator. Return iterator to successor
+  [[nodiscard]] Iterator
+  Erase(ConstIterator pos) noexcept; // can be moved to public interface
+
+  /// Inorder print tree nodes to output stream
   void Print(std::ostream &ostream = std::cout) const
     requires requires(std::ostream &ostream, value_type key) { ostream << key; }
   ;
@@ -148,12 +198,12 @@ public:
   /// Clear tree
   void Clear() noexcept {
     ClearRecursive(root_);
-    root_ = nullptr;
+    root_ = nil_;
     size_ = 0;
   }
 
   /// Return true if tree is empty, false otherwise
-  [[nodiscard]] bool empty() const noexcept { return root_ == nullptr; }
+  [[nodiscard]] bool empty() const noexcept { return root_ == nil_; }
 
   /// Swap trees
   void Swap(RedBlackTree &other) noexcept {
@@ -166,7 +216,18 @@ public:
   [[nodiscard]] size_type size() const noexcept { return size_; }
 
 private:
-  NodeType *root_ = nullptr;
+  static NodeType *GetNil() {
+    static std::unique_ptr<NodeType> nil = [] {
+      auto node = std::make_unique<NodeType>(Key{});
+      node->color = Color::kBlack;
+      node->left = node->right = node->parent = node.get();
+      return node;
+    }();
+    return nil.get();
+  }
+
+  NodeType *nil_ = GetNil();
+  NodeType *root_ = GetNil();
   size_type size_ = 0;
   Compare comp_;
 
@@ -191,16 +252,14 @@ private:
    * @param node_was_left True if node was left child of deleted node, false
    * otherwise
    */
-  void RemoveFixup(NodeType *node, NodeType *parent,
-                   bool node_was_left) noexcept;
+  void RemoveFixup(NodeType *x) noexcept;
 
-  /// Return color of the node. Root(nullptr) is black
+  /// Returns color of the node
   [[nodiscard]] static Color ColorOf(NodeType *node) noexcept {
+    // nil isn't nullptr, so there shouldn't be nullptr, just to be sure
     return node ? node->color : Color::kBlack; // nullptr is black
   }
 
-  /// Call appropriate rotate method based on bool flag
-  void Rotate(NodeType *n, bool left);
   void RotateLeft(NodeType *x) noexcept;
   void RotateRight(NodeType *y) noexcept;
 
@@ -214,48 +273,10 @@ private:
 
   [[nodiscard]] NodeType *LowerBoundImpl(const value_type &key) const noexcept;
 
-  /// Return iterator to first node with key >= specified key
-  [[nodiscard]] Iterator LowerBound(const value_type &key) noexcept {
-    auto result = LowerBoundImpl(key);
-    return (result != nullptr) ? Iterator(result) : end();
-  }
-
-  /// Return const iterator to first node with key >= specified key
-  [[nodiscard]] ConstIterator LowerBound(const value_type &key) const noexcept {
-    auto result = LowerBoundImpl(key);
-    return (result != nullptr) ? ConstIterator(result) : cend();
-  }
-
   [[nodiscard]] NodeType *UpperBoundImpl(const value_type &key) const noexcept;
-
-  /// Return iterator to first node with key > specified key
-  [[nodiscard]] Iterator UpperBound(const value_type &key) noexcept {
-    auto result = UpperBoundImpl(key);
-    return (result != nullptr) ? Iterator(result) : end();
-  }
-  /// Return const iterator to first node with key > specified key
-  [[nodiscard]] ConstIterator UpperBound(const value_type &key) const noexcept {
-    auto result = UpperBoundImpl(key);
-    return (result != nullptr) ? ConstIterator(result) : cend();
-  }
-
-  [[nodiscard]] std::pair<Iterator, Iterator>
-  EqualRange(const value_type &key) noexcept {
-    return {LowerBound(key), UpperBound(key)};
-  }
-
-  /// Return iterators pair(range) of nodes with equal keys
-  [[nodiscard]] std::pair<ConstIterator, ConstIterator>
-  EqualRange(const value_type &key) const noexcept {
-    return {LowerBound(key), UpperBound(key)};
-  }
 
   /// Remove specified node
   void RemoveOne(NodeType *node) noexcept;
-
-  /// Erase element by iterator. Return iterator to successor
-  [[nodiscard]] Iterator
-  Erase(ConstIterator pos) noexcept; // can be moved to public interface
 
   /// Get the leftmost node in subtree with root pointed to by %node
   [[nodiscard]] NodeType *GetMinimum(NodeType *node) const noexcept;
@@ -294,25 +315,38 @@ RedBlackTree<Key, Compare>::Insert(K &&val) {
     root_ = new NodeType(std::forward<K>(val)); // red node
     ++size_;
     root_->color = Color::kBlack; // root is always black
-    return Iterator(root_);
+    root_->parent = root_->left = root_->right = nil_;
+    return Iterator(root_, nil_);
   }
 
   NodeType *current = root_;
-  NodeType *parent = nullptr;
+  NodeType *parent = nil_;
 
   // Find place to insert
-  while (current) {
+  while (current != nil_) {
     parent = current;
     auto cur_data = current->data;
+#if 0 // duplicates !!!Doesn't work!!!
     if (comp_(val, cur_data)) {
       current = current->left;
     } else {
       current = current->right; // duplicates go to right too
     }
+#endif
+#if 1 // no duplicates
+    if (comp_(val, cur_data)) {
+      current = current->left;
+    } else if (comp_(cur_data, val)) {
+      current = current->right;
+    } else {
+      return end();
+    }
+#endif
   }
 
   // Insert
   NodeType *new_node = new NodeType(std::forward<K>(val));
+  new_node->left = new_node->right = nil_;
   new_node->parent = parent;
   ++size_;
   if (comp_(new_node->data, parent->data)) {
@@ -324,7 +358,7 @@ RedBlackTree<Key, Compare>::Insert(K &&val) {
   // Balancing
   InsertFixup(new_node);
 
-  return Iterator(new_node);
+  return Iterator(new_node, nil_);
 }
 
 template <typename Key, typename Compare>
@@ -351,24 +385,28 @@ void RedBlackTree<Key, Compare>::Print(std::ostream &ostream) const
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 void RedBlackTree<Key, Compare>::InsertFixup(NodeType *node) noexcept {
+  // Fix property 2 and 4
+  // Prop 2 dead if node is root
+  // Prop 4 dead if node's parent is Red
+
   // If the parent of the new node is black, no properties are violated.
   // While parent red - unbalanced
-  while (node != root_ && node->parent->color == Color::kRed) {
+  while (node->parent->color == Color::kRed) {
     NodeType *parent = node->parent;
-    NodeType *grandparent = parent->parent;
+    NodeType *grandpa = parent->parent;
 
     // Case A: parent is grandparent's left kid
-    if (parent == grandparent->left) {
-      NodeType *uncle = grandparent->right;
+    if (parent == grandpa->left) {
+      NodeType *uncle = grandpa->right;
 
       // Case 1: Red uncle
       // Recolor parent and uncle to black, grandparent to red. Then, move up
       // the tree.
-      if (uncle && uncle->color == Color::kRed) {
+      if (uncle->color == Color::kRed) {
         parent->color = Color::kBlack;
         uncle->color = Color::kBlack;
-        grandparent->color = Color::kRed;
-        node = grandparent;
+        grandpa->color = Color::kRed;
+        node = grandpa;
       }
       // Case 2: Black uncle
       // If node is a right child, perform a left rotation on the parent. If the
@@ -380,33 +418,33 @@ void RedBlackTree<Key, Compare>::InsertFixup(NodeType *node) noexcept {
           node = parent;
           RotateLeft(node);
           parent = node->parent;
-          grandparent = parent->parent;
+          grandpa = parent->parent;
         }
         // Case 2b: node is left child -> rotate right
         parent->color = Color::kBlack;
-        grandparent->color = Color::kRed;
-        RotateRight(grandparent);
+        grandpa->color = Color::kRed;
+        RotateRight(grandpa);
       }
     }
     // Case B: parent is grandparent's right kid
     else {
-      NodeType *uncle = grandparent->left;
+      NodeType *uncle = grandpa->left;
 
-      if (uncle && uncle->color == Color::kRed) {
+      if (uncle->color == Color::kRed) {
         parent->color = Color::kBlack;
         uncle->color = Color::kBlack;
-        grandparent->color = Color::kRed;
-        node = grandparent;
+        grandpa->color = Color::kRed;
+        node = grandpa;
       } else {
         if (node == parent->left) {
           node = parent;
           RotateRight(node);
           parent = node->parent;
-          grandparent = parent->parent;
+          grandpa = parent->parent;
         }
         parent->color = Color::kBlack;
-        grandparent->color = Color::kRed;
-        RotateLeft(grandparent);
+        grandpa->color = Color::kRed;
+        RotateLeft(grandpa);
       }
     }
   }
@@ -420,7 +458,7 @@ template <typename Key, typename Compare>
 typename RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::FindNode(const Key &key) const noexcept {
   NodeType *current = root_;
-  while (current) {
+  while (current != nil_) {
     Key cur_key = current->data;
     if (comp_(key, cur_key)) {
       current = current->left;
@@ -430,7 +468,7 @@ RedBlackTree<Key, Compare>::FindNode(const Key &key) const noexcept {
       return current;
     }
   }
-  return nullptr;
+  return nil_;
 }
 
 template <typename Key, typename Compare>
@@ -439,9 +477,9 @@ RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::LowerBoundImpl(
     const value_type &key) const noexcept {
   auto current = root_;
-  NodeType *result = nullptr;
+  NodeType *result = nil_;
 
-  while (current) {
+  while (current != nil_) {
     if (comp_(current->data, key)) { // current < target
       current = current->right;
     } else { // current >= target
@@ -459,9 +497,9 @@ RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::UpperBoundImpl(
     const value_type &key) const noexcept {
   auto current = root_;
-  NodeType *result = nullptr;
+  NodeType *result = nil_;
 
-  while (current) {
+  while (current != nil_) {
     if (comp_(key, current->data)) { // target < current
       result = current;
       current = current->left;
@@ -473,39 +511,26 @@ RedBlackTree<Key, Compare>::UpperBoundImpl(
   return result;
 }
 
+// Cormen et al.
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
-  if (node == nullptr) {
+  if (node == nil_) {
     return;
   }
 
-  NodeType *y = node;    // the node that will be removed
-  NodeType *x = nullptr; // the child that replaces y (may be nullptr)
+  NodeType *y = node; // the node that will be removed
+  NodeType *x = nil_; // the child that replaces y
   Color original_color = y->color;
 
-  // Additional info for fixup as workaround for algorithm w/o NIL sentinel
-  NodeType *parent_for_fixup = nullptr;
-  bool x_is_left_for_fixup = false;
-
   // Case 1: No left child
-  if (node->left == nullptr) {
+  if (node->left == nil_) {
     x = node->right;
-
-    // Save parent and direction for fixup(when x == nullptr)
-    parent_for_fixup = node->parent;
-    x_is_left_for_fixup = (parent_for_fixup && node == parent_for_fixup->left);
-
     Transplant(node, node->right);
   }
   // Case 2: No right child
-  else if (node->right == nullptr) {
+  else if (node->right == nil_) {
     x = node->left;
-
-    // Save parent and direction
-    parent_for_fixup = node->parent;
-    x_is_left_for_fixup = (parent_for_fixup && node == parent_for_fixup->left);
-
     Transplant(node, node->left);
   }
   // Case 3: Two children
@@ -517,21 +542,11 @@ void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
 
     // If y is direct child of node
     if (y->parent == node) {
-      if (x) {
-        x->parent = y; // x becomes child of y
-      }
-
-      // Save parent and direction
-      parent_for_fixup = y;
-      x_is_left_for_fixup = false;
+      x->parent = y;           // x becomes child of y
     } else {                   // y is somewhere deeper in right subtree
       Transplant(y, y->right); //  Extract y from its position
       y->right = node->right;  // Move node's right child to y
       y->right->parent = y;
-
-      // Save parent and direction
-      parent_for_fixup = y->parent;
-      x_is_left_for_fixup = (parent_for_fixup && y == parent_for_fixup->left);
     }
 
     // Replace node with y
@@ -548,85 +563,74 @@ void RedBlackTree<Key, Compare>::RemoveOne(NodeType *node) noexcept {
 
   // Fix tree if the deleted node was black
   if (original_color == Color::kBlack) {
-    RemoveFixup(x, parent_for_fixup, x_is_left_for_fixup);
+    RemoveFixup(x);
   }
 }
 
+// Cormen et al. Fix prop 1, 2, 4
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
-void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *node, NodeType *parent,
-                                             bool node_was_left) noexcept {
-  bool left = node_was_left;
-  bool right = !left;
-  while ((node == nullptr || node->color == Color::kBlack) && node != root_ &&
-         parent != nullptr) {
-    // Determine node's sibling
-    NodeType *sibling = left ? parent->right : parent->left;
-
-    // Case 1: Red sibling
-    if (sibling && sibling->color == Color::kRed) {
-      sibling->color = Color::kBlack;
-      parent->color = Color::kRed;
-      Rotate(parent, left);
-      // Update sibling after rotation
-      sibling = left ? parent->right : parent->left;
-    }
-
-    // Case 2: Both siblings are black(or NIL)
-    if ((sibling == nullptr || ColorOf(sibling->left) == Color::kBlack) &&
-        (sibling == nullptr || ColorOf(sibling->right) == Color::kBlack)) {
-
-      if (sibling) {
-        sibling->color = Color::kRed;
+void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *x) noexcept {
+  while (x != root_ && x->color == Color::kBlack) {
+    if (x == x->parent->left) {
+      auto w = x->parent->right;
+      // Case 1
+      if (w->color == Color::kRed) {
+        w->color = Color::kBlack;
+        x->parent->color = Color::kRed;
+        RotateLeft(x->parent);
+        w = x->parent->right;
       }
-
-      // Go up the tree
-      node = parent;
-      parent = node->parent;
-      left = (parent && node == parent->left);
-      right = !left;
-
-      continue;
-    }
-
-    // Case 3: Black outer nephew
-    bool outer_nephew_black = left ? ColorOf(sibling->right) == Color::kBlack
-                                   : ColorOf(sibling->left) == Color::kBlack;
-
-    if (outer_nephew_black) {
-      // Recolor inner nephew and sibling
-      NodeType *&inner_nephew = left ? sibling->left : sibling->right;
-      if (inner_nephew) {
-        inner_nephew->color = Color::kBlack;
+      // Case 2
+      if (w->left->color == Color::kBlack && w->right->color == Color::kBlack) {
+        w->color = Color::kRed;
+        x = x->parent;
+      } else {
+        if (w->right->color == Color::kBlack) {
+          // Case 3
+          w->left->color = Color::kBlack;
+          w->color = Color::kRed;
+          RotateRight(w);
+          w = x->parent->right;
+        }
+        // Case 4
+        w->color = x->parent->color;
+        x->parent->color = w->right->color = Color::kBlack;
+        RotateLeft(x->parent);
+        x = root_;
       }
-
-      sibling->color = Color::kRed;
-      Rotate(sibling, right);
-
-      // Update sibling
-      sibling = left ? parent->right : parent->left;
+    } else { // symmetric
+      auto w = x->parent->left;
+      // Case 1
+      if (w->color == Color::kRed) {
+        w->color = Color::kBlack;
+        x->parent->color = Color::kRed;
+        RotateRight(x->parent);
+        w = x->parent->left;
+      }
+      // Case 2
+      if (w->right->color == Color::kBlack && w->left->color == Color::kBlack) {
+        w->color = Color::kRed;
+        x = x->parent;
+      } else {
+        if (w->left->color == Color::kBlack) {
+          // Case 3
+          w->right->color = Color::kBlack;
+          w->color = Color::kRed;
+          RotateLeft(w);
+          w = x->parent->left;
+        }
+        // Case 4
+        w->color = x->parent->color;
+        x->parent->color = w->left->color = Color::kBlack;
+        RotateRight(x->parent);
+        x = root_;
+      }
     }
-
-    // Case 4: Red outer nephew
-    sibling->color = parent->color;
-    parent->color = Color::kBlack;
-
-    NodeType *&outer_nephew = left ? sibling->right : sibling->left;
-    if (outer_nephew) {
-      outer_nephew->color = Color::kBlack;
-    }
-
-    Rotate(parent, left);
-
-    node = root_;
-    parent = nullptr;
-    break;
   }
 
-  // root is always black
-  if (node) {
-    node->color = Color::kBlack;
-  }
+  // x is a root and root is always black
+  x->color = Color::kBlack;
 }
 
 template <typename Key, typename Compare>
@@ -637,13 +641,13 @@ void RedBlackTree<Key, Compare>::RotateLeft(NodeType *x) noexcept {
 
   // Step 1: Move y's left child to x's right
   x->right = y->left;
-  if (y->left) {
+  if (y->left != nil_) {
     y->left->parent = x;
   }
 
   // Step 2: Move y up to x's position
   y->parent = x->parent;
-  if (!x->parent) {
+  if (x->parent == nil_) {
     root_ = y; // x was root, now y becomes root
   } else if (x == x->parent->left) {
     x->parent->left = y; // x was left child
@@ -664,13 +668,13 @@ void RedBlackTree<Key, Compare>::RotateRight(NodeType *y) noexcept {
 
   // Step 1: Move x's right child to y's left
   y->left = x->right;
-  if (x->right) {
+  if (x->right != nil_) {
     x->right->parent = y;
   }
 
   // Step 2: Move x up to y's position
   x->parent = y->parent;
-  if (!y->parent) {
+  if (y->parent == nil_) {
     root_ = x; // y was root, now x becomes root
   } else if (y == y->parent->left) {
     y->parent->left = x; // y was left child
@@ -685,24 +689,16 @@ void RedBlackTree<Key, Compare>::RotateRight(NodeType *y) noexcept {
 
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
-void RedBlackTree<Key, Compare>::Rotate(NodeType *n, bool left) {
-  if (left) {
-    RotateLeft(n);
-  } else {
-    RotateRight(n);
-  }
-}
-
-template <typename Key, typename Compare>
-  requires RedBlackTreeKey<Key, Compare>
 typename RedBlackTree<Key, Compare>::Iterator
 RedBlackTree<Key, Compare>::Erase(ConstIterator pos) noexcept {
   if (pos == end()) {
-    return Iterator(nullptr);
+    return end();
   }
 
   NodeType *node = const_cast<NodeType *>(pos.node_);
-  auto next = Iterator(Iterator::GetSuccessor(node));
+
+  Iterator next(node, nil_);
+  ++next;
 
   RemoveOne(node);
 
@@ -713,7 +709,10 @@ template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 typename RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::GetMinimum(NodeType *node) const noexcept {
-  while (node && node->left) {
+  if (node == nil_) {
+    return nil_;
+  }
+  while (node->left != nil_) {
     node = node->left;
   }
   return node;
@@ -723,17 +722,21 @@ template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 typename RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::GetMaximum(NodeType *node) const noexcept {
-  while (node && node->right) {
+  if (node == nil_) {
+    return nil_;
+  }
+  while (node->right != nil_) {
     node = node->right;
   }
   return node;
 }
 
+// From Cormen et al.
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 void RedBlackTree<Key, Compare>::Transplant(NodeType *u, NodeType *v) noexcept {
   // u's parent becomes v's parent
-  if (u->parent == nullptr) {
+  if (u->parent == nil_) {
     root_ = v;
   } else if (u == u->parent->left) {
     u->parent->left = v;
@@ -742,15 +745,13 @@ void RedBlackTree<Key, Compare>::Transplant(NodeType *u, NodeType *v) noexcept {
   }
 
   // update parent for v
-  if (v != nullptr) {
-    v->parent = u->parent;
-  }
+  v->parent = u->parent;
 }
 
 template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 void RedBlackTree<Key, Compare>::ClearRecursive(NodeType *node) noexcept {
-  if (node == nullptr) {
+  if (node == nil_) {
     return;
   }
   ClearRecursive(node->left);
@@ -763,8 +764,8 @@ template <typename Key, typename Compare>
 typename RedBlackTree<Key, Compare>::NodeType *
 RedBlackTree<Key, Compare>::CopyRecursive(const NodeType *node,
                                           NodeType *parent) {
-  if (node == nullptr) {
-    return nullptr;
+  if (node == nil_) {
+    return nil_;
   }
 
   NodeType *new_node = nullptr;
@@ -794,8 +795,13 @@ public:
   using reference = const Key &; // always const
   using pointer = const Key *;   // always const
 
-  BasicIterator() noexcept : node_(nullptr) {}
-  explicit BasicIterator(NodePtr node) noexcept : node_(node) {}
+  BasicIterator() {
+    assert(false);
+  } // default_constructible workaround (DO NOT USE)
+
+  explicit BasicIterator(NodePtr node, NodePtr nil) noexcept
+      : node_(node), nil_(nil) {}
+  explicit BasicIterator(NodePtr nil) noexcept : node_(nil), nil_(nil) {}
 
   // NOLINTBEGIN(google-explicit-constructor)
   /**
@@ -806,7 +812,7 @@ public:
   template <bool OtherIsConst>
     requires(IsConst && !OtherIsConst)
   BasicIterator(const BasicIterator<OtherIsConst> &other) noexcept
-      : node_(other.node_) {}
+      : node_(other.node_), nil_(other.nil_) {}
   // NOLINTEND(google-explicit-constructor)
 
   BasicIterator(const BasicIterator &) = default;
@@ -845,7 +851,8 @@ public:
 private:
   friend class RedBlackTree;
 
-  NodePtr node_; ///< node ptr iterator is pointing to
+  NodePtr node_{nullptr}; ///< node ptr iterator is pointing to
+  NodePtr nil_{nullptr};  ///< sentinel
 
   // Helpers
 
@@ -855,18 +862,18 @@ private:
    * @param node
    * @return NodePtr
    */
-  static NodePtr GetSuccessor(NodePtr node) noexcept {
-    if (node == nullptr) {
-      return nullptr;
+  NodePtr GetSuccessor(NodePtr node) noexcept {
+    if (node == nil_) {
+      return nil_;
     }
 
     // If right child exist: go one right then left till the end
-    if (node->right) {
+    if (node->right != nil_) {
       node = node->right;
-      if (node->right != nullptr && node->right->data == node->data) {
+      if (node->right != nil_ && node->right->data == node->data) {
         return node->right; // return duplicate
       }
-      while (node->left) {
+      while (node->left != nil_) {
         node = node->left;
       }
       return node;
@@ -874,7 +881,7 @@ private:
 
     // If no right child exist: go up
     NodePtr parent = node->parent;
-    while (parent && node == parent->right) {
+    while (parent != nil_ && node == parent->right) {
       node = parent;
       parent = parent->parent;
     }
@@ -887,15 +894,15 @@ private:
    * @param node
    * @return NodePtr
    */
-  static NodePtr GetPredecessor(NodePtr node) noexcept {
-    if (node == nullptr) {
-      return nullptr;
+  NodePtr GetPredecessor(NodePtr node) noexcept {
+    if (node == nil_) {
+      return nil_;
     }
 
     // If left child exist: go one left then right till the end
-    if (node->left) {
+    if (node->left != nil_) {
       node = node->left;
-      while (node->right) {
+      while (node->right != nil_) {
         node = node->right;
       }
       return node;
@@ -903,7 +910,7 @@ private:
 
     // If no left child exist: go up
     NodePtr parent = node->parent;
-    while (parent && node == parent->left) {
+    while (parent != nil_ && node == parent->left) {
       node = parent;
       parent = parent->parent;
     }
