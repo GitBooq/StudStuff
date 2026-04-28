@@ -241,7 +241,7 @@ private:
 
   [[nodiscard]] std::pair<Iterator, Iterator>
   EqualRange(const value_type &key) noexcept {
-    return {LowerBound(key), UpperBound(key)}; // тут почемуто вызво конс версий
+    return {LowerBound(key), UpperBound(key)};
   }
 
   /// Return iterators pair(range) of nodes with equal keys
@@ -556,11 +556,10 @@ template <typename Key, typename Compare>
   requires RedBlackTreeKey<Key, Compare>
 void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *node, NodeType *parent,
                                              bool node_was_left) noexcept {
+  bool left = node_was_left;
+  bool right = !left;
   while ((node == nullptr || node->color == Color::kBlack) && node != root_ &&
          parent != nullptr) {
-    bool left = node_was_left;
-    bool right = !left;
-
     // Determine node's sibling
     NodeType *sibling = left ? parent->right : parent->left;
 
@@ -585,6 +584,7 @@ void RedBlackTree<Key, Compare>::RemoveFixup(NodeType *node, NodeType *parent,
       node = parent;
       parent = node->parent;
       left = (parent && node == parent->left);
+      right = !left;
 
       continue;
     }
