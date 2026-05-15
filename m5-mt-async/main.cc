@@ -1,3 +1,4 @@
+#include "parallel_accumulate.h"
 #include "thread_pool.h"
 #include <cassert>
 #include <format>
@@ -21,45 +22,66 @@ void PrettyPrint(
                            loc.function_name())
             << message << std::endl;
 }
+
+void TaskA() {
+  PrettyPrint("started");
+  std::this_thread::sleep_for(RandomMilliseconds(100, 500));
+  PrettyPrint("finished");
+}
+int TaskB(int val) {
+  PrettyPrint("started");
+  std::this_thread::sleep_for(RandomMilliseconds(100, 500));
+  PrettyPrint("finished");
+  return val;
+}
+void TaskC(int val1, std::string val2, double val3) {
+  PrettyPrint("started");
+  std::this_thread::sleep_for(RandomMilliseconds(100, 500));
+  auto msg = std::format("{}, {}, {}", val1, val2, val3);
+  PrettyPrint(msg);
+  PrettyPrint("finished");
+}
+void TaskThrow() {
+  PrettyPrint("throw!");
+  throw std::runtime_error("test");
+}
 } // namespace
 
 int main() {
+  std::vector<long long> nums;
+  for (auto i = 1LL; i <= 1'000'000; ++i) {
+    nums.push_back(i);
+  }
+  // (1 + 1'000'000) * 1'000'000 / 2 = 500'000'500'000
+  constexpr auto kSn = 500'000'500'000;
+  long long sn_res{};
+
   auto threads = std::thread::hardware_concurrency();
   threads = threads != 0 ? threads : 2;
 
   std::cout << "Creating thread pool with " << threads << " threads"
             << std::endl;
   {
-    hwmod5::ThreadPool tp(threads);
-
-    auto taskA = [] {
-      PrettyPrint("started");
-      std::this_thread::sleep_for(RandomMilliseconds(100, 500));
-      PrettyPrint("finished");
-    };
-    auto taskB = [](int val) {
-      PrettyPrint("started");
-      std::this_thread::sleep_for(RandomMilliseconds(100, 500));
-      PrettyPrint("finished");
-      return val;
-    };
-    auto taskC = [](int val1, std::string val2, double val3) {
-      PrettyPrint("started");
-      std::this_thread::sleep_for(RandomMilliseconds(100, 500));
-      auto msg = std::format("{}, {}, {}", val1, val2, val3);
-      PrettyPrint(msg);
-      PrettyPrint("finished");
-    };
+    hwmod5::ThreadPool pool(threads);
 
     for (int i = 0; i < 100; ++i) {
-      tp.Enqueue(taskA);
+      pool.Enqueue(TaskA);
     }
 
-    tp.Enqueue(taskA);
-    auto taskBFuture = tp.Enqueue(taskB, 42);
-    tp.Enqueue(taskC, 42, "string", .7);
+    try {
+      pool.Enqueue(TaskThrow);
+    } catch (const std::runtime_error &e) {
+      std::cout << e.what() << std::endl;
+    }
+
+    pool.Enqueue(TaskA);
+    auto taskBFuture = pool.Enqueue(TaskB, 42);
+    pool.Enqueue(TaskC, 42, "string", .7);
 
     assert(taskBFuture.get() == 42);
+
+    sn_res = ParallelAccumulate(pool, nums.begin(), nums.end(), 0LL);
   }
   std::cout << "Thread pool destroyed" << std::endl;
+  std::cout << std::format("ParallelAccumulate Result:\n\tExpected: {} Actual: {}", kSn, sn_res) << std::endl;
 }

@@ -4,9 +4,11 @@ project(HWMod5 LANGUAGES CXX)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
-option(ENABLE_TSAN "Enable TSan" ON)
+option(ENABLE_TSAN "Enable TSan" OFF)
 
 if (MSVC)
     # warning level 4
@@ -26,9 +28,18 @@ if (ENABLE_TSAN)
     add_link_options(-fsanitize=thread)
 endif()
 
+option(ENABLE_TEST "Enable TEST" OFF)
+
+include_directories(${INCLUDE_DIR})
+
+if (NOT ENABLE_TEST)
 add_library(ThreadPool thread_pool.cc)
 target_compile_features(ThreadPool PRIVATE cxx_std_23)
 
 add_executable(Main main.cc)
 target_link_libraries(Main PRIVATE ThreadPool)
 target_compile_features(Main PRIVATE cxx_std_23)
+else ()
+add_executable(Test test.cc)
+target_compile_features(Test PRIVATE cxx_std_23)
+endif()
