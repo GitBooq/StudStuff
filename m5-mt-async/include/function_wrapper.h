@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <utility>
 
 class FunctionWrapper {
   struct impl_base {

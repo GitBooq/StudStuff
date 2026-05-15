@@ -1,10 +1,14 @@
 #pragma once
+#include <atomic>
+#include <future>
+#include <memory>
+#include <thread>
+#include <type_traits>
+#include <vector>
+
 #include "function_wrapper.h"
 #include "threadsafe_queue.h"
 #include "work_stealing_queue.h"
-#include <future>
-#include <thread>
-#include <vector>
 
 class ThreadPool {
   using TaskType = FunctionWrapper;

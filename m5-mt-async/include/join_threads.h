@@ -2,7 +2,7 @@
 #include <thread>
 #include <vector>
 
-// Pre C++20 jthreads by A. Williams 
+// Pre C++20 jthreads by A. Williams
 class join_threads {
   std::vector<std::thread> &threads;
 

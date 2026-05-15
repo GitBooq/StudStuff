@@ -1,6 +1,9 @@
 #pragma once
-#include "function_wrapper.h"
 #include <deque>
+#include <mutex>
+#include <utility>
+
+#include "function_wrapper.h"
 
 class WorkStealingQueue {
 private:

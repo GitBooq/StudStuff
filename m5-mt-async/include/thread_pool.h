@@ -3,9 +3,11 @@
 #include <future>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <stop_token>
 #include <thread>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 // Реализация Thread Pool на C++ (std::mutex + std::condition_variable)

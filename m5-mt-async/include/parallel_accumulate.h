@@ -1,9 +1,11 @@
 #pragma once
 
 #include <concepts>
+#include <functional>
 #include <future>
 #include <iterator>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 template <typename Iterator, typename T> struct accumulate_block {
@@ -18,7 +20,7 @@ concept ThreadPoolConc = requires(P &pool, std::function<void()> task) {
 };
 
 template <typename Iterator, typename T, ThreadPoolConc TP>
-    T ParallelAccumulate(TP &pool, Iterator first, Iterator last, T init) {
+T ParallelAccumulate(TP &pool, Iterator first, Iterator last, T init) {
   unsigned long const length = std::distance(first, last);
   if (!length)
     return init;

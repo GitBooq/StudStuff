@@ -1,11 +1,20 @@
-#include "parallel_accumulate.h"
-#include "thread_pool.h"
+#include <bits/chrono.h>
 #include <cassert>
 #include <format>
 #include <iostream>
 #include <random>
 #include <source_location>
 #include <string_view>
+#include <syncstream>
+#include <future>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "parallel_accumulate.h"
+#include "thread_pool.h"
+
 
 namespace {
 auto RandomMilliseconds(int min_ms, int max_ms) {
@@ -18,9 +27,10 @@ auto RandomMilliseconds(int min_ms, int max_ms) {
 void PrettyPrint(
     std::string_view message,
     const std::source_location &loc = std::source_location::current()) {
-  std::cout << std::format(" [Thread {}] {}: ", std::this_thread::get_id(),
-                           loc.function_name())
-            << message << std::endl;
+  std::osyncstream(std::cout)
+      << std::format(" [Thread {}] {}: ", std::this_thread::get_id(),
+                     loc.function_name())
+      << message << std::endl;
 }
 
 void TaskA() {
@@ -42,6 +52,7 @@ void TaskC(int val1, std::string val2, double val3) {
   PrettyPrint("finished");
 }
 void TaskThrow() {
+  std::this_thread::sleep_for(RandomMilliseconds(100, 500));
   PrettyPrint("throw!");
   throw std::runtime_error("test");
 }
@@ -75,13 +86,16 @@ int main() {
     }
 
     pool.Enqueue(TaskA);
-    auto taskBFuture = pool.Enqueue(TaskB, 42);
+    auto taskB_future = pool.Enqueue(TaskB, 42);
     pool.Enqueue(TaskC, 42, "string", .7);
 
-    assert(taskBFuture.get() == 42);
+    assert(taskB_future.get() == 42);
 
     sn_res = ParallelAccumulate(pool, nums.begin(), nums.end(), 0LL);
   }
   std::cout << "Thread pool destroyed" << std::endl;
-  std::cout << std::format("ParallelAccumulate Result:\n\tExpected: {} Actual: {}", kSn, sn_res) << std::endl;
+  std::cout << std::format(
+                   "ParallelAccumulate Result:\n\tExpected: {} Actual: {}", kSn,
+                   sn_res)
+            << std::endl;
 }
