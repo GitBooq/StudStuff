@@ -12,13 +12,16 @@
 ```cpp
 class ThreadPool final {
 public:
+  // Creates pool
   explicit ThreadPool(std::size_t workers);
 
+  // Adds task to pool
   template <typename F, typename... Args>
     requires std::invocable<F, Args...>
   auto Enqueue(F &&f, Args &&...args)
       -> std::future<std::invoke_result_t<F, Args...>>;
 
+  // Stops the pool
   void Shutdown() noexcept;
 };
 ```
