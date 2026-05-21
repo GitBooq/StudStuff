@@ -15,6 +15,7 @@ public:
   explicit ThreadPool(std::size_t workers);
 
   template <typename F, typename... Args>
+    requires std::invocable<F, Args...>
   auto Enqueue(F &&f, Args &&...args)
       -> std::future<std::invoke_result_t<F, Args...>>;
 

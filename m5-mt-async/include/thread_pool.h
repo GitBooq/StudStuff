@@ -35,22 +35,29 @@ public:
   }
 
   template <std::predicate Pred>
-  [[nodiscard]] std::unique_lock<std::mutex> makeLockWithWait(Pred waitForCondition) {
+  [[nodiscard]] std::unique_lock<std::mutex>
+  makeLockWithWait(Pred &&waitForCondition) {
     std::unique_lock lock{combined_.mutex_};
-    combined_.condition_.wait(lock, waitForCondition);
+    combined_.condition_.wait(lock, std::forward<Pred>(waitForCondition));
     return lock;
   }
 
   template <std::predicate Pred>
-  [[nodiscard]] std::unique_lock<std::mutex> makeLockWithWait(std::stop_token stop, Pred waitForCondition) {
+  [[nodiscard]] std::unique_lock<std::mutex>
+  makeLockWithWait(std::stop_token stop, Pred &&waitForCondition) {
     std::unique_lock lock{combined_.mutex_};
-    combined_.condition_.wait(lock, stop, waitForCondition);
+    combined_.condition_.wait(lock, stop, std::forward<Pred>(waitForCondition));
     return lock;
   }
 };
 
 class ThreadPool final {
 public:
+  /**
+   * @brief Construct a new Thread Pool object
+   *
+   * @param workers number of threads
+   */
   explicit ThreadPool(std::size_t workers);
   ~ThreadPool() noexcept;
 
@@ -60,10 +67,25 @@ public:
   ThreadPool(ThreadPool &&) noexcept = delete;
   ThreadPool &operator=(ThreadPool &&) noexcept = delete;
 
+  /**
+   * @brief Puts task into threadpool queue
+   *
+   * @tparam F callable type
+   * @tparam Args
+   * @param f callable
+   * @param args
+   * @return std::future<std::invoke_result_t<F, Args...>>
+   * @throw std::runtime_error if pool is already stopped
+   */
   template <typename F, typename... Args>
+    requires std::invocable<F, Args...>
   auto Enqueue(F &&f, Args &&...args)
       -> std::future<std::invoke_result_t<F, Args...>>;
 
+  /**
+   * @brief Stops the threadpool. Already enqueued task will be completed.
+   *
+   */
   void Shutdown() noexcept;
 
 private:
@@ -76,6 +98,7 @@ private:
 };
 
 template <class F, class... Args>
+  requires std::invocable<F, Args...>
 auto ThreadPool::Enqueue(F &&f, Args &&...args)
     -> std::future<std::invoke_result_t<F, Args...>> {
   if (stop_source_.stop_requested()) {
