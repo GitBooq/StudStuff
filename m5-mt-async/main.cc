@@ -1,20 +1,19 @@
 #include <bits/chrono.h>
 #include <cassert>
 #include <format>
+#include <future>
 #include <iostream>
 #include <random>
 #include <source_location>
-#include <string_view>
-#include <syncstream>
-#include <future>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <syncstream>
 #include <thread>
 #include <vector>
 
 #include "parallel_accumulate.h"
 #include "thread_pool.h"
-
 
 namespace {
 auto RandomMilliseconds(int min_ms, int max_ms) {
@@ -73,8 +72,10 @@ int main() {
   std::cout << "Creating thread pool with " << threads << " threads"
             << std::endl;
   {
+    // Create threadpool
     hwmod5::ThreadPool pool(threads);
 
+    // Enqueue tasks
     for (int i = 0; i < 100; ++i) {
       pool.Enqueue(TaskA);
     }
@@ -92,6 +93,16 @@ int main() {
     assert(taskB_future.get() == 42);
 
     sn_res = ParallelAccumulate(pool, nums.begin(), nums.end(), 0LL);
+
+    // Shutting down the pool
+    // All tasks that are already enqueued will be completed
+    pool.Shutdown();
+    try {
+      // Trying to enqueue one more task leads to runtime_error
+      pool.Enqueue(TaskA);
+    } catch (const std::runtime_error &e) {
+      std::cout << e.what() << std::endl;
+    }
   }
   std::cout << "Thread pool destroyed" << std::endl;
   std::cout << std::format(

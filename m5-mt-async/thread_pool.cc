@@ -1,7 +1,6 @@
-#include "thread_pool.h"
+// thread_pool.cc
 
-#include <condition_variable>
-#include <mutex>
+#include "thread_pool.h"
 
 namespace hwmod5 {
 ThreadPool::ThreadPool(std::size_t workers) {
@@ -26,8 +25,8 @@ void ThreadPool::worker_thread(std::stop_token stop) {
 
   for (;;) {
     {
-      std::unique_lock<std::mutex> lock(queue_mutex_);
-      cv_.wait(lock, stop, [this] { return !work_queue_.empty(); });
+      const auto lock = monitor_.makeLockWithWait(
+          stop, [this] { return !work_queue_.empty(); });
       if (stop.stop_requested() && work_queue_.empty()) {
         return;
       }

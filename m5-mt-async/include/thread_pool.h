@@ -1,3 +1,5 @@
+// thread_pool.h
+
 #include <condition_variable>
 #include <cstddef>
 #include <future>
@@ -10,26 +12,43 @@
 #include <utility>
 #include <vector>
 
-// Реализация Thread Pool на C++ (std::mutex + std::condition_variable)
-/*
-  Задача: реализовать ThreadPool, с корректным завершением потоков и безопасной
-   передачей задач через очередь.
-
-  Функциональные требования:
-    1. Пул создаёт `N` worker-потоков при инициализации.
-    2. Задачи хранятся в общей очереди (`std::queue<std::function<void()>>` или
-  эквивалент).
-    3. Worker-потоки ожидают задачи через `std::condition_variable`.
-    4. После `Shutdown()`:
-      - новые задачи не принимаются;
-      - все уже добавленные задачи выполняются;
-      - потоки корректно завершаются (`join`).
-    5. `Enqueue` после остановки пула должен выбрасывать исключение
-  (`std::runtime_error`).
-*/
-
 namespace hwmod5 {
-// API
+class Monitor {
+public:
+  struct UnlockAndNotify {
+    std::mutex mutex_;
+    std::condition_variable_any condition_;
+
+    void lock() { mutex_.lock(); }
+    void unlock() {
+      mutex_.unlock();
+      condition_.notify_one();
+    }
+  };
+
+private:
+  UnlockAndNotify combined_;
+
+public:
+  [[nodiscard]] std::unique_lock<UnlockAndNotify> makeLockWithNotify() {
+    return std::unique_lock{combined_};
+  }
+
+  template <std::predicate Pred>
+  [[nodiscard]] std::unique_lock<std::mutex> makeLockWithWait(Pred waitForCondition) {
+    std::unique_lock lock{combined_.mutex_};
+    combined_.condition_.wait(lock, waitForCondition);
+    return lock;
+  }
+
+  template <std::predicate Pred>
+  [[nodiscard]] std::unique_lock<std::mutex> makeLockWithWait(std::stop_token stop, Pred waitForCondition) {
+    std::unique_lock lock{combined_.mutex_};
+    combined_.condition_.wait(lock, stop, waitForCondition);
+    return lock;
+  }
+};
+
 class ThreadPool final {
 public:
   explicit ThreadPool(std::size_t workers);
@@ -48,13 +67,12 @@ public:
   void Shutdown() noexcept;
 
 private:
+  Monitor monitor_;
   std::stop_source stop_source_;
   std::queue<std::packaged_task<void()>> work_queue_;
-  mutable std::mutex queue_mutex_;
-  std::condition_variable_any cv_;
   std::vector<std::jthread> threads_;
 
-  void worker_thread(std::stop_token st);
+  void worker_thread(std::stop_token stop);
 };
 
 template <class F, class... Args>
@@ -72,12 +90,11 @@ auto ThreadPool::Enqueue(F &&f, Args &&...args)
   std::future<ReturnType> result = task.get_future();
 
   {
-    std::scoped_lock lock(queue_mutex_);
+    const auto lock = monitor_.makeLockWithNotify();
     work_queue_.push(std::packaged_task<void()>(
         [task = std::move(task)] mutable { task(); }));
   }
 
-  cv_.notify_one();
   return result;
 }
 } // namespace hwmod5

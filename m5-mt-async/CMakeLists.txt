@@ -28,18 +28,11 @@ if (ENABLE_TSAN)
     add_link_options(-fsanitize=thread)
 endif()
 
-option(ENABLE_TEST "Enable TEST" OFF)
-
 include_directories(${INCLUDE_DIR})
 
-if (NOT ENABLE_TEST)
 add_library(ThreadPool thread_pool.cc)
 target_compile_features(ThreadPool PRIVATE cxx_std_23)
 
 add_executable(Main main.cc)
 target_link_libraries(Main PRIVATE ThreadPool)
 target_compile_features(Main PRIVATE cxx_std_23)
-else ()
-add_executable(Test test.cc)
-target_compile_features(Test PRIVATE cxx_std_23)
-endif()
