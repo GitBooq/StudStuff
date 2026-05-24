@@ -1,5 +1,7 @@
 // thread_pool.h
 
+#pragma once
+
 #include <condition_variable>
 #include <cstddef>
 #include <future>
@@ -30,13 +32,13 @@ private:
   UnlockAndNotify combined_;
 
 public:
-  [[nodiscard]] std::unique_lock<UnlockAndNotify> makeLockWithNotify() {
+  [[nodiscard]] std::unique_lock<UnlockAndNotify> MakeLockWithNotify() {
     return std::unique_lock{combined_};
   }
 
   template <std::predicate Pred>
   [[nodiscard]] std::unique_lock<std::mutex>
-  makeLockWithWait(Pred &&waitForCondition) {
+  MakeLockWithWait(Pred &&waitForCondition) {
     std::unique_lock lock{combined_.mutex_};
     combined_.condition_.wait(lock, std::forward<Pred>(waitForCondition));
     return lock;
@@ -44,7 +46,7 @@ public:
 
   template <std::predicate Pred>
   [[nodiscard]] std::unique_lock<std::mutex>
-  makeLockWithWait(std::stop_token stop, Pred &&waitForCondition) {
+  MakeLockWithWait(std::stop_token stop, Pred &&waitForCondition) {
     std::unique_lock lock{combined_.mutex_};
     combined_.condition_.wait(lock, stop, std::forward<Pred>(waitForCondition));
     return lock;
@@ -56,7 +58,8 @@ public:
   /**
    * @brief Construct a new Thread Pool object
    *
-   * @param workers number of threads
+   * @param workers number of threads, should be > 0
+   * @throw std::invalid_arguments if workers == 0
    */
   explicit ThreadPool(std::size_t workers);
   ~ThreadPool() noexcept;
@@ -83,7 +86,7 @@ public:
       -> std::future<std::invoke_result_t<F, Args...>>;
 
   /**
-   * @brief Stops the threadpool. Already enqueued task will be completed.
+   * @brief Stops the threadpool. Already enqueued tasks will be completed.
    *
    */
   void Shutdown() noexcept;
@@ -94,7 +97,7 @@ private:
   std::queue<std::packaged_task<void()>> work_queue_;
   std::vector<std::jthread> threads_;
 
-  void worker_thread(std::stop_token stop);
+  void WorkerThread(std::stop_token stop);
 };
 
 template <class F, class... Args>
@@ -113,7 +116,7 @@ auto ThreadPool::Enqueue(F &&f, Args &&...args)
   std::future<ReturnType> result = task.get_future();
 
   {
-    const auto lock = monitor_.makeLockWithNotify();
+    const auto lock = monitor_.MakeLockWithNotify();
     work_queue_.push(std::packaged_task<void()>(
         [task = std::move(task)] mutable { task(); }));
   }
