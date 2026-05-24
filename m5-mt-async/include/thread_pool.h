@@ -105,6 +105,7 @@ template <class F, class... Args>
   requires std::invocable<F, Args...>
 auto ThreadPool::Enqueue(F &&f, Args &&...args)
     -> std::future<std::invoke_result_t<F, Args...>> {
+  // assuming that threadpool has single-threaded interface this check is enough
   if (stop_source_.stop_requested()) {
     throw std::runtime_error("Enqueue on stopped ThreadPool");
   }
