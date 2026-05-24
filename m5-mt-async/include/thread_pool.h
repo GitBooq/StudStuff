@@ -98,6 +98,7 @@ private:
   std::vector<std::jthread> threads_;
 
   void WorkerThread(std::stop_token stop);
+  void JoinAllThreads() noexcept;
 };
 
 template <class F, class... Args>

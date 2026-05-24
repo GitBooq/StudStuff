@@ -22,7 +22,18 @@ ThreadPool::ThreadPool(std::size_t workers) {
 
 ThreadPool::~ThreadPool() noexcept { Shutdown(); }
 
-void ThreadPool::Shutdown() noexcept { stop_source_.request_stop(); }
+void ThreadPool::Shutdown() noexcept {
+  stop_source_.request_stop();
+  JoinAllThreads();
+}
+
+void ThreadPool::JoinAllThreads() noexcept {
+  for (auto &t : threads_) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
+}
 
 void ThreadPool::WorkerThread(std::stop_token stop) {
   decltype(work_queue_)::value_type task;
