@@ -4,10 +4,14 @@
 
 namespace hwmod5 {
 ThreadPool::ThreadPool(std::size_t workers) {
+  if (0 == workers) {
+    throw std::invalid_argument("There can't be 0 work threads");
+  }
+
   try {
     for (std::size_t i = 0; i < workers; ++i) {
       threads_.emplace_back(
-          [this](std::stop_token stop) { worker_thread(stop); },
+          [this](std::stop_token stop) { WorkerThread(stop); },
           stop_source_.get_token());
     }
   } catch (...) {
@@ -20,12 +24,12 @@ ThreadPool::~ThreadPool() noexcept { Shutdown(); }
 
 void ThreadPool::Shutdown() noexcept { stop_source_.request_stop(); }
 
-void ThreadPool::worker_thread(std::stop_token stop) {
+void ThreadPool::WorkerThread(std::stop_token stop) {
   decltype(work_queue_)::value_type task;
 
   for (;;) {
     {
-      const auto lock = monitor_.makeLockWithWait(
+      const auto lock = monitor_.MakeLockWithWait(
           stop, [this] { return !work_queue_.empty(); });
       if (stop.stop_requested() && work_queue_.empty()) {
         return;
