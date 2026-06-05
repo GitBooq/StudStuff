@@ -5,7 +5,7 @@ add_executable(sender
 
 target_link_libraries(sender
     PRIVATE
-    ipv4filter
+    netFilterLogger
     proto_generated
 )
 

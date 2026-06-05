@@ -27,7 +27,16 @@ message(STATUS "Protobuf_VERSION = ${Protobuf_VERSION}")
 find_package(gRPC CONFIG REQUIRED)
 
 add_subdirectory(proto)
-add_subdirectory(libs/ipv4filter)
+
+include(FetchContent)
+FetchContent_Declare(
+    netLogFilter
+    GIT_REPOSITORY https://github.com/GitBooq/net-log-filter.git
+    GIT_TAG v1.0.1
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(netLogFilter)
 
 add_subdirectory(services/sender)
 add_subdirectory(services/receiver)
