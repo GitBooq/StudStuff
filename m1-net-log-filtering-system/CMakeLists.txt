@@ -35,13 +35,19 @@ target_link_libraries(StreamProcessor INTERFACE
     Filter
 )
 
+add_library(netFilterLogger INTERFACE)
+
+target_include_directories(
+    netFilterLogger
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 add_executable(Main
     ${SRC_DIR}/main.cc
 )
 target_link_libraries(Main PRIVATE 
-    IPv4Address
-    Filter
-    StreamProcessor
+    netFilterLogger
 )
 
 if (ENABLE_SANITIZERS)

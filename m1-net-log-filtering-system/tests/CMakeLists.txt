@@ -6,9 +6,7 @@ add_executable(tests_all
 )
 
 target_link_libraries(tests_all
-    IPv4Address
-    Filter
-    StreamProcessor
+    netFilterLogger
     GTest::gtest_main
 )
 
