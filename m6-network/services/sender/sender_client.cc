@@ -1,7 +1,7 @@
 // sender_client.cc
 #include <net_logger/net_logger.h>
 
-#include "grpc_sender.h"
+#include "gRPC/grpc_sender.h"
 
 #include <chrono>
 #include <format>
@@ -9,12 +9,14 @@
 #include <iostream>
 
 namespace {
+
 std::string GetCurrentUTC() {
   using namespace std::chrono;
   auto now = floor<seconds>(utc_clock::now());
 
   return std::format("{:%FT%T}Z", now);
 }
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -24,8 +26,9 @@ int main(int argc, char **argv) {
   }
 
   using namespace datatransfer::client;
-  DataSender sender(grpc::CreateChannel("localhost:50051",
-                                        grpc::InsecureChannelCredentials()));
+  auto channel = grpc::CreateChannel("localhost:50051",
+                                     grpc::InsecureChannelCredentials());
+  GrpcMessageSender sender(channel);
 
   std::ifstream input(argv[1]);
   if (!input.is_open()) {
@@ -45,10 +48,7 @@ int main(int argc, char **argv) {
     net::logger::ProcessStream(buffer, payload, filter);
     std::string payload_str = payload.str();
 
-    datatransfer::TransferRequest msg;
-    msg.set_source_service("ipv4_filter");
-    msg.set_timestamp_utc(GetCurrentUTC());
-    msg.set_payload(payload_str);
+    LogMessage msg{"ipv4_filter", GetCurrentUTC(), payload_str};
 
     sender.Send(msg);
   } catch (const std::exception &e) {
