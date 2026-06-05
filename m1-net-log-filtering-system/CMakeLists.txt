@@ -37,6 +37,14 @@ target_link_libraries(StreamProcessor INTERFACE
 
 add_library(netFilterLogger INTERFACE)
 
+target_link_libraries(
+    netFilterLogger
+    INTERFACE
+        IPv4Address
+        Filter
+        StreamProcessor
+)
+
 target_include_directories(
     netFilterLogger
     INTERFACE
