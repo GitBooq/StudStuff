@@ -1,17 +1,18 @@
+// grpc_message_sender.cc
 #include <grpcpp/grpcpp.h>
 
 #include <memory>
 
-#include "grpc_sender.h"
+#include "sender/grpc_message_sender.h"
 
 #include "data_transfer.grpc.pb.h"
 
-namespace datatransfer::client {
+namespace datatransfer {
 
 GrpcMessageSender::GrpcMessageSender(std::shared_ptr<grpc::Channel> channel)
     : stub_(DataTransfer::NewStub(channel)) {}
 
-bool GrpcMessageSender::Send(const LogMessage &message) {
+bool GrpcMessageSender::Send(const application::LogMessage &message) {
 
   TransferRequest request;
   request.set_source_service(message.source_service);
@@ -29,4 +30,4 @@ bool GrpcMessageSender::Send(const LogMessage &message) {
   return response.success();
 }
 
-} // namespace datatransfer::client
+} // namespace datatransfer

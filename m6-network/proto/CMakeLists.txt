@@ -1,7 +1,7 @@
 ###########################################################################
 # We have file: proto/data_transfer.proto
 # From this file protoc should generate:
-#   build/generated/
+#   build/proto/generated/
 #   data_transfer.pb.h
 #   data_transfer.pb.cc
 #   data_transfer.grpc.pb.h

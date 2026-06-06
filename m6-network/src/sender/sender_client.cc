@@ -1,7 +1,7 @@
 // sender_client.cc
 #include <net_logger/net_logger.h>
 
-#include "gRPC/grpc_sender.h"
+#include "sender/grpc_message_sender.h"
 
 #include <chrono>
 #include <format>
@@ -25,11 +25,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  using namespace datatransfer::client;
-  auto channel = grpc::CreateChannel("localhost:50051",
-                                     grpc::InsecureChannelCredentials());
-  GrpcMessageSender sender(channel);
-
   std::ifstream input(argv[1]);
   if (!input.is_open()) {
     std::cerr << "Can't open file\n";
@@ -48,7 +43,11 @@ int main(int argc, char **argv) {
     net::logger::ProcessStream(buffer, payload, filter);
     std::string payload_str = payload.str();
 
-    LogMessage msg{"ipv4_filter", GetCurrentUTC(), payload_str};
+    application::LogMessage msg{"ipv4_filter", GetCurrentUTC(), payload_str};
+
+    auto channel = grpc::CreateChannel("localhost:50051",
+                                       grpc::InsecureChannelCredentials());
+    datatransfer::GrpcMessageSender sender(channel);
 
     sender.Send(msg);
   } catch (const std::exception &e) {

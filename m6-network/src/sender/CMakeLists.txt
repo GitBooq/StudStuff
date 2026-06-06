@@ -1,6 +1,6 @@
 add_executable(sender
     sender_client.cc
-    gRPC/grpc_sender.cc
+    grpc_message_sender.cc
 )
 
 target_link_libraries(sender

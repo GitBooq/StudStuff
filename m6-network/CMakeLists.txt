@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(ipv4_grpc)
+project(DataTransfer)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,15 +28,19 @@ find_package(gRPC CONFIG REQUIRED)
 
 add_subdirectory(proto)
 
+set(NETLOGFILTER_BUILD_TESTS OFF)
+set(NETLOGFILTER_BUILD_EXAMPLES OFF)
+
 include(FetchContent)
 FetchContent_Declare(
     netLogFilter
     GIT_REPOSITORY https://github.com/GitBooq/net-log-filter.git
-    GIT_TAG v1.0.1
+    GIT_TAG v1.0.2
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(netLogFilter)
 
-add_subdirectory(services/sender)
-add_subdirectory(services/receiver)
+include_directories(${PROJECT_SOURCE_DIR}/include)
+add_subdirectory(src/sender)
+add_subdirectory(src/receiver)

@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace datatransfer::client {
+namespace application {
 
 struct LogMessage {
   std::string source_service;
@@ -12,4 +12,4 @@ struct LogMessage {
   std::string payload;
 };
 
-} // namespace datatransfer::client
+} // namespace application
