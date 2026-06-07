@@ -1,0 +1,20 @@
+# ubuntu 24.04 + gRPC + Protobuf
+FROM ghcr.io/gitbooq/grpc-cxx-dev:1.0 AS builder
+
+WORKDIR /project
+
+COPY . .
+
+RUN cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release
+
+ARG BUILD_JOBS=4
+RUN cmake --build build -j${BUILD_JOBS}
+
+FROM ubuntu:24.04
+
+COPY --from=builder \
+    /project/build/src/receiver/receiver \
+    /usr/local/bin/receiver
+
+CMD ["receiver"]

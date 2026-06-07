@@ -1,0 +1,22 @@
+services:
+
+  receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile.receiver
+
+    ports:
+      - "50051:50051"
+
+  sender:
+    build:
+      context: .
+      dockerfile: Dockerfile.sender
+    environment:
+      SERVER_HOST: receiver
+      SERVER_PORT: 50051
+    volumes:
+      - .:/workspace
+
+    depends_on:
+      - receiver
