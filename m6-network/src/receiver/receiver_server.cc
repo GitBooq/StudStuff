@@ -8,11 +8,12 @@
 
 #include "receiver/console_message_handler.h"
 #include "receiver/grpc_receiver_service.h"
+#include "common/helpers.h"
 
 int main() {
   using namespace datatransfer;
-
-  std::string server_address("0.0.0.0:50051");
+  auto port = helpers::GetServerPortOr50051();
+  std::string server_address("0.0.0.0:" + port);
 
   application::ConsoleMessageHandler handler;
   GrpcReceiverServiceImpl service(handler);

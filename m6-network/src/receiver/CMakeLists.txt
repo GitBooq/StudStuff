@@ -7,4 +7,5 @@ add_executable(receiver
 target_link_libraries(receiver
     PRIVATE
     proto_generated
+    common_lib
 )

@@ -46,6 +46,7 @@ FetchContent_MakeAvailable(netLogFilter)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(src/sender)
 add_subdirectory(src/receiver)
+add_subdirectory(src/common)
 
 if (ENABLE_TESTS)
   # GoogleTest

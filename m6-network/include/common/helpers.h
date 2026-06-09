@@ -23,5 +23,6 @@ std::vector<application::LogMessage> GetLogMessages(
     const std::vector<std::string>& payloads, const std::string& log_source);
 
 std::string GetServerNameOrLocalhost();
+std::string GetServerPortOr50051();
 
 }  // namespace helpers

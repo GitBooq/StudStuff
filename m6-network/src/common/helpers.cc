@@ -1,4 +1,4 @@
-#include "sender/helpers.h"
+#include "common/helpers.h"
 
 namespace helpers {
 
@@ -58,6 +58,11 @@ std::vector<application::LogMessage> GetLogMessages(
 std::string GetServerNameOrLocalhost() {
   const auto* const chars = std::getenv("SERVER_HOST");
   return (nullptr != chars) ? chars : "localhost";
+}
+
+std::string GetServerPortOr50051() {
+  const auto* const chars = std::getenv("SERVER_PORT");
+  return (nullptr != chars) ? chars : "50051";
 }
 
 }  // namespace helpers

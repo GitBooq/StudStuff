@@ -3,7 +3,7 @@
 
 #include "sender/grpc_message_sender.h"
 #include "common/log_message.h"
-#include "sender/helpers.h"
+#include "common/helpers.h"
 
 #include <chrono>
 #include <format>

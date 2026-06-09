@@ -4,9 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.receiver
-
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-50051}
     ports:
-      - "50051:50051"
+      - "${SERVER_PORT:-50051}:${SERVER_PORT:-50051}"
 
   sender:
     build:
@@ -14,7 +15,7 @@ services:
       dockerfile: Dockerfile.sender
     environment:
       SERVER_HOST: receiver
-      SERVER_PORT: 50051
+      SERVER_PORT: ${SERVER_PORT:-50051}
     volumes:
       - .:/workspace
 

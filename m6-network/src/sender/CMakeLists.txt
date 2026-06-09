@@ -10,12 +10,12 @@ target_link_libraries(sender_lib
 
 add_executable(sender
     sender_client.cc
-    helpers.cc
 )
 
 target_link_libraries(sender
     PRIVATE
         sender_lib
+        common_lib
 )
 
 target_include_directories(sender
