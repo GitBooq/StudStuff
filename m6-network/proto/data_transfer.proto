@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package datatransfer;
+
+service DataTransfer {
+    rpc SendData (TransferRequest) returns (TransferResponse);
+}
+
+message TransferRequest {
+    string source_service = 1;
+    string timestamp_utc = 2;
+    string payload = 3;
+}
+
+message TransferResponse {
+    bool success = 1;
+    string message = 2;
+}

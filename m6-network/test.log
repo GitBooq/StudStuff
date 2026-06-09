@@ -1,0 +1,28 @@
+# Valid IPv4
+192.168.1.25 - GET /index.html
+10.0.0.100 - POST /login
+10.0.0.2 - GET /resource1.html
+10.0.0.3 - GET /resource2.html
+10.0.0.4 - GET /resource3.html
+10.0.0.5 - GET /resource4.html
+10.0.0.6 - GET /resource5.html
+10.0.0.7 - GET /resource6.html
+10.0.0.8 - GET /resource7.html
+10.0.0.9 - GET /resource8.html
+
+# Edge cases
+0.0.0.0 - DEFAULT_ROUTE
+255.255.255.255 - BROADCAST
+192.168.1.0 - NETWORK_ADDR
+192.168.1.255 - BROADCAST_ADDR
+
+# Invalid data
+192.168.1.256 - INVALID_OCTET
+192.168.1 - INCOMPLETE
+invalid.ip - CORRUPTED
+ - EMPTY_LINE
+
+# Filter boundary checks
+10.0.0.1 - LOWER_BOUND
+10.0.0.100 - UPPER_BOUND
+10.0.0.101 - OUT_OF_RANGE

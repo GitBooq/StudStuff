@@ -1,0 +1,23 @@
+services:
+
+  receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile.receiver
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-50051}
+    ports:
+      - "${SERVER_PORT:-50051}:${SERVER_PORT:-50051}"
+
+  sender:
+    build:
+      context: .
+      dockerfile: Dockerfile.sender
+    environment:
+      SERVER_HOST: receiver
+      SERVER_PORT: ${SERVER_PORT:-50051}
+    volumes:
+      - .:/workspace
+
+    depends_on:
+      - receiver
