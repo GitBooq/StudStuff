@@ -11,6 +11,25 @@
 #include <iostream>
 #include <string>
 
+namespace {
+
+// clang-format off
+[[maybe_unused]] constexpr absl::string_view kRetryPolicy = 
+    "{\"methodConfig\" : [{"
+    "   \"name\" : [{\"service\": \"datatransfer.DataTransfer\"}],"
+    "   \"waitForReady\": true,"
+    "   \"retryPolicy\": {"
+    "     \"maxAttempts\": 4,"
+    "     \"initialBackoff\": \"0.1s\","
+    "     \"maxBackoff\": \"1s\","
+    "     \"backoffMultiplier\": 2.0,"
+    "     \"retryableStatusCodes\": [\"UNAVAILABLE\"]"
+    "    }"
+    "}]}";
+// clang-format on
+
+}  // namespace
+
 int main(int argc, char** argv) {
   if (argc != 2) {
     std::cout << "Usage: sender [path_to_file]\n";
@@ -41,10 +60,13 @@ int main(int argc, char** argv) {
     std::vector<application::LogMessage> log_messages =
         GetLogMessages(payloads, "ipv4_filter");
 
-    std::string target =
-        GetTargetServerString(GetServerNameOrLocalhost(), "50051");
-    auto channel =
-        grpc::CreateChannel(target, grpc::InsecureChannelCredentials());
+    std::string target = GetTargetServerString(GetServerNameOrLocalhost(),
+                                               GetServerPortOr50051());
+    auto channel_args = grpc::ChannelArguments();
+    channel_args.SetServiceConfigJSON(std::string(kRetryPolicy));
+
+    auto channel = grpc::CreateCustomChannel(
+        target, grpc::InsecureChannelCredentials(), channel_args);
     datatransfer::GrpcMessageSender sender(channel);
 
     for (const auto& msg : log_messages) {

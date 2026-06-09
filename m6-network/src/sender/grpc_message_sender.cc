@@ -9,7 +9,8 @@
 
 namespace datatransfer {
 
-GrpcMessageSender::GrpcMessageSender(std::shared_ptr<grpc::Channel> channel, std::size_t timeoutMs)
+GrpcMessageSender::GrpcMessageSender(std::shared_ptr<grpc::Channel> channel,
+                                     std::size_t timeoutMs)
     : stub_(DataTransfer::NewStub(channel)), timeoutMs_(timeoutMs) {}
 
 bool GrpcMessageSender::Send(const application::LogMessage& message) {
@@ -20,7 +21,8 @@ bool GrpcMessageSender::Send(const application::LogMessage& message) {
 
   TransferResponse response;
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeoutMs_));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::milliseconds(timeoutMs_));
   grpc::Status status = stub_->SendData(&context, request, &response);
 
   HandleResponse(status, response);
