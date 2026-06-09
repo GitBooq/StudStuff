@@ -1,12 +1,21 @@
+add_library(sender_lib STATIC
+    grpc_message_sender.cc
+)
+
+target_link_libraries(sender_lib
+    PUBLIC
+        netFilterLogger
+        proto_generated
+)
+
 add_executable(sender
     sender_client.cc
-    grpc_message_sender.cc
+    helpers.cc
 )
 
 target_link_libraries(sender
     PRIVATE
-    netFilterLogger
-    proto_generated
+        sender_lib
 )
 
 target_include_directories(sender

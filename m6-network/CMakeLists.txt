@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 option(ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
+option(ENABLE_TESTS "Enable tests" OFF)
+
 if (MSVC)
     # warning level 4
     add_compile_options(/W4)
@@ -44,3 +46,20 @@ FetchContent_MakeAvailable(netLogFilter)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(src/sender)
 add_subdirectory(src/receiver)
+
+if (ENABLE_TESTS)
+  # GoogleTest
+  include(FetchContent)
+  FetchContent_Declare(
+      googletest
+      GIT_REPOSITORY https://github.com/google/googletest.git
+      GIT_TAG v1.17.0
+      GIT_SHALLOW TRUE
+      GIT_PROGRESS TRUE
+  )
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
