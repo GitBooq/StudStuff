@@ -97,4 +97,12 @@ Payload: 10.0.0.1 - LOWER_BOUND
 
 =====================
 ```
-Sender output is empty if no errors.
+
+*Sender output:*
+```
+Ok. ResponseMessage=Data received successfully
+Ok. ResponseMessage=Data received successfully
+Ok. ResponseMessage=Data received successfully
+Ok. ResponseMessage=Data received successfully
+Ok. ResponseMessage=Data received successfully
+```
