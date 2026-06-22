@@ -1,0 +1,82 @@
+services:
+  data-gen:
+    build:
+      context: ./datagen
+      dockerfile: Dockerfile.data-gen
+    container_name: data-gen
+    volumes:
+      - ./datagen/src:/app/src    # mount local src to container
+      - ./data:/app/data          # generated CSV-data
+      
+    environment:
+      NUM_USERS: ${NUM_USERS:-10000}
+      NUM_POSTS: ${NUM_POSTS:-5000}
+      NUM_COMMENTS: ${NUM_COMMENTS:-100000}
+      NUM_TAGS: ${NUM_TAGS:-100}
+      NUM_POST_TAGS: ${NUM_POST_TAGS:-15000}
+    profiles:
+      - generate
+    command: python /app/src/generate_data.py
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+      POSTGRES_PORT: ${POSTGRES_PORT:-15432}
+
+      POSTGRES_INITDB_ARGS: "--data-checksums" # data corruption check
+
+    ports:
+      - "${POSTGRES_PORT:-15432}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # DBMS data
+
+      # sync w/ local fs 
+      - ./sql:/docker-entrypoint-initdb.d       # run all files [.sql;.sql.gz;.sh] on first start
+      - ./data:/data                            # CSV for import
+      - ./scripts:/scripts
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-mydb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cpp-client:
+    build:
+      context: ./cpp-app
+      dockerfile: Dockerfile.cpp-app
+    container_name: cpp-client
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+      POSTGRES_PORT: ${POSTGRES_PORT:-15432}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  pgadmin_data:

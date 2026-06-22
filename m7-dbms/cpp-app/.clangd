@@ -1,0 +1,17 @@
+# cpp-app/.clangd
+CompileFlags:
+  Add:
+    - "-std=c++20"
+    - "-I/usr/include"
+    - "-I/usr/local/include"
+  Remove:
+    - "-m*"
+    
+Diagnostics:
+  ClangTidy:
+    Add: 
+      - performance-*
+      - modernize-*
+      - readability-*
+    Remove:
+      - modernize-use-trailing-return-type

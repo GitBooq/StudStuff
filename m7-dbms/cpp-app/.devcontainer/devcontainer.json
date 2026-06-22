@@ -1,0 +1,37 @@
+{
+    "name": "C++ PostgreSQL Development",
+    "build": {
+        "dockerfile": "Dockerfile.dev",
+        "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cmake-tools"
+            ],
+            "settings": {
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "clangd.path": "/usr/bin/clangd",
+                "clangd.arguments": [
+                    "--background-index",
+                    "--compile-commands-dir=${workspaceFolder}/build",
+                    "--clang-tidy",
+                    "--header-insertion=iwyu",
+                    "--completion-style=detailed",
+                    "--function-arg-placeholders"
+                ],
+                // clang-format
+                "editor.formatOnSave": true,
+                "[cpp]": {
+                    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+                },
+                "cmake.configureArgs": [
+                    "-DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                ]
+            }
+        }
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+    "workspaceFolder": "/workspace"
+}

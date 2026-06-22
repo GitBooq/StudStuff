@@ -1,0 +1,9 @@
+build/
+cmake-build-*/
+compile_commands.json
+vcpkg_installed/
+cpp-app/vcpkg_installed/
+data/
+postgres_data/
+pgadmin_data/
+.vscode/
