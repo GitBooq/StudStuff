@@ -37,7 +37,7 @@ SELECT setval('comments_id_seq', (SELECT MAX(id) FROM comments));
 SELECT setval('post_tags_id_seq', (SELECT MAX(id) FROM post_tags));
 
 -- ============================================
--- ПРОВЕРКА ДАННЫХ (опционально)
+-- ПРОВЕРКА ДАННЫХ
 -- ============================================
 
 -- Проверяем количество записей
