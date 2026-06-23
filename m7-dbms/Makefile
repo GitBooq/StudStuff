@@ -28,4 +28,4 @@ clean:
 	docker compose down -v
 	rm -rf data/*.csv
 
-all: up generate import
+all: build-cpp-client up generate import
