@@ -80,7 +80,7 @@ int main() {
     auto create_user_post_use_case = application::CreateUserWithPost(factory);
     auto create_user_post_response = create_user_post_use_case.Execute(
         {.title = "transaction test",
-         .email = "d34db33f@example.com",
+         .email = "d34db33f@example.gav",
          .description = "test",
          .status = domain::Post::Status::PUBLISHED});
     std::cout << create_user_post_response.message << std::endl;
