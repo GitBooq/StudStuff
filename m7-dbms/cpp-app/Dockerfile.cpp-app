@@ -1,0 +1,61 @@
+FROM ubuntu:24.04 AS builder-base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential g++-13 git cmake ninja-build pkg-config \
+    curl wget zip unzip tar \
+    bison flex \
+    python3 python3-pip \
+    zlib1g-dev liblz4-dev libzstd-dev \
+    libssl-dev \
+    autoconf automake libtool \
+    ca-certificates && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+RUN python3 --version
+
+
+FROM builder-base AS vcpkg-builder
+WORKDIR /build
+
+RUN git clone https://github.com/microsoft/vcpkg.git && \
+    cd vcpkg && \
+    git checkout 2026.06.01 && \
+    ./bootstrap-vcpkg.sh -disableMetrics
+
+ENV VCPKG_ROOT=/build/vcpkg
+
+COPY vcpkg.json ./
+RUN ${VCPKG_ROOT}/vcpkg install --triplet x64-linux
+
+
+FROM builder-base AS app-builder
+WORKDIR /app
+
+COPY --from=vcpkg-builder /build/vcpkg /opt/vcpkg
+COPY --from=vcpkg-builder /build/vcpkg_installed /opt/vcpkg_installed
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_FORCE_SYSTEM_BINARIES=1
+
+COPY . .
+
+RUN cmake -B ./build -S . \
+    -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake \
+    -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build ./build --config Release
+
+
+FROM ubuntu:24.04
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=app-builder /app/build/cpp_app .
+
+CMD ["./cpp_app"]

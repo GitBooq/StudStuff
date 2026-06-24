@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    {
+      "name": "libpqxx",
+      "version>=": "8.0.1"
+    }
+  ],
+  "builtin-baseline": "9849e070ad4c3383890fb1c80ae0c54325e2484a"
+}

@@ -1,0 +1,7 @@
+build/
+.vscode/
+.git/
+.gitignore
+*.md
+*.log
+.DS_Store

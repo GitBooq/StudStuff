@@ -1,0 +1,39 @@
+# .devcontainer/Dockerfile.dev
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential g++-13 git cmake ninja-build pkg-config \
+    curl wget zip unzip tar \
+    bison flex \
+    python3 python3-pip \
+    zlib1g-dev liblz4-dev libzstd-dev \
+    libssl-dev \
+    autoconf automake libtool \
+    ca-certificates && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+# dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdb clangd clang-format clang-tidy \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/clangd /usr/local/bin/clangd
+
+# vcpkg
+WORKDIR /opt
+RUN git clone https://github.com/microsoft/vcpkg.git && \
+    cd vcpkg && \
+    git checkout 2026.06.01 && \
+    ./bootstrap-vcpkg.sh -disableMetrics
+
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_FORCE_SYSTEM_BINARIES=1
+
+COPY vcpkg.json /tmp/
+RUN cd /tmp && ${VCPKG_ROOT}/vcpkg install --triplet x64-linux
+
+WORKDIR /workspace
