@@ -71,7 +71,7 @@ def generate_users(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(
             file,
@@ -119,7 +119,7 @@ def generate_posts(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(
             file,
@@ -182,7 +182,7 @@ def generate_comments(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(
             file,
@@ -225,7 +225,7 @@ def add_my_comment_to_csv(
 
     with filename.open(
         "r",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         comments = list(csv.reader(file))
 
@@ -246,7 +246,7 @@ def add_my_comment_to_csv(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(
             file,
@@ -365,7 +365,7 @@ def generate_tags(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(file)
 
@@ -398,7 +398,7 @@ def generate_post_tags(
     with filename.open(
         "w",
         newline="",
-        encoding="utf-8-sig",
+        encoding="utf-8",
     ) as file:
         writer = csv.writer(file)
 

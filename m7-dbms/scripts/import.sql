@@ -8,19 +8,19 @@ BEGIN;
 SET session_replication_role = replica;
 
 -- 1. Импорт пользователей
-\COPY users(id, email, date) FROM 'data/users.csv' DELIMITER ',' CSV HEADER;
+\COPY users(id, email, date) FROM 'data/users.csv' DELIMITER ',' CSV;
 
 -- 2. Импорт тегов
-\COPY tags(id, name) FROM 'data/tags.csv' DELIMITER ',' CSV HEADER;
+\COPY tags(id, name) FROM 'data/tags.csv' DELIMITER ',' CSV;
 
 -- 3. Импорт постов
-\COPY posts(id, title, description, date, status, author_id) FROM 'data/posts.csv' DELIMITER ',' CSV HEADER;
+\COPY posts(id, title, description, date, status, author_id) FROM 'data/posts.csv' DELIMITER ',' CSV;
 
 -- 4. Импорт комментариев
-\COPY comments(id, content, date, author_id, post_id) FROM 'data/comments.csv' DELIMITER ',' CSV HEADER;
+\COPY comments(id, content, date, author_id, post_id) FROM 'data/comments.csv' DELIMITER ',' CSV;
 
 -- 5. Импорт связей постов и тегов
-\COPY post_tags(id, post_id, tag_id) FROM 'data/post_tags.csv' DELIMITER ',' CSV HEADER;
+\COPY post_tags(id, post_id, tag_id) FROM 'data/post_tags.csv' DELIMITER ',' CSV;
 
 -- Включаем проверки обратно
 SET session_replication_role = DEFAULT;
